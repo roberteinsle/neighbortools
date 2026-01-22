@@ -35,7 +35,7 @@ RUN pnpm build
 WORKDIR /app/packages/shared-utils
 RUN pnpm build
 
-# Build service
+# Build api-gateway service
 WORKDIR /app/services/api-gateway
 RUN pnpm build
 
