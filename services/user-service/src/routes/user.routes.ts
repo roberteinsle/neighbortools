@@ -4,6 +4,12 @@ import { UserController } from '../controllers/user.controller.js';
 const router = Router();
 const userController = new UserController();
 
+// Profile routes (use x-user-id header) - must be before /:id routes
+router.get('/profile', userController.getProfile);
+router.patch('/profile', userController.updateProfile);
+router.post('/profile', userController.updateProfile); // POST as fallback for PATCH
+router.post('/change-password', userController.changeProfilePassword);
+
 // GET /users - List all users (admin only)
 router.get('/', userController.listUsers);
 

@@ -10,6 +10,7 @@ import { RegisterPage } from '@/pages/RegisterPage';
 import { ToolsPage } from '@/pages/ToolsPage';
 import { LendingsPage } from '@/pages/LendingsPage';
 import { NeighborhoodsPage } from '@/pages/NeighborhoodsPage';
+import { ProfilePage } from '@/pages/ProfilePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,6 +55,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <NeighborhoodsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

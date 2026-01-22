@@ -17,6 +17,8 @@ app.use(cors({
   credentials: true,
 }));
 
+// No body parsing - let proxy forward raw body to microservices
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

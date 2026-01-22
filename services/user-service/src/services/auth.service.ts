@@ -11,7 +11,7 @@ const JWT_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_DAYS = 7;
 
 export class AuthService {
-  async register(dto: CreateUserDto): Promise<AuthResponse> {
+  async register(dto: CreateUserDto): Promise<{ user: Omit<User, 'createdAt' | 'updatedAt'>; accessToken: string; refreshToken: string }> {
     // Validate email
     if (!isValidEmail(dto.email)) {
       throw new Error('Invalid email format');
@@ -49,16 +49,17 @@ export class AuthService {
     });
 
     // Generate tokens
-    const token = this.generateAccessToken(user.id);
-    await this.createRefreshToken(user.id);
+    const accessToken = this.generateAccessToken(user.id);
+    const refreshToken = await this.createRefreshToken(user.id);
 
     return {
       user: this.mapUserToResponse(user),
-      token,
+      accessToken,
+      refreshToken,
     };
   }
 
-  async login(dto: LoginDto): Promise<AuthResponse> {
+  async login(dto: LoginDto): Promise<{ user: Omit<User, 'createdAt' | 'updatedAt'>; accessToken: string; refreshToken: string }> {
     // Find user
     const user = await prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
@@ -79,12 +80,13 @@ export class AuthService {
     }
 
     // Generate tokens
-    const token = this.generateAccessToken(user.id);
-    await this.createRefreshToken(user.id);
+    const accessToken = this.generateAccessToken(user.id);
+    const refreshToken = await this.createRefreshToken(user.id);
 
     return {
       user: this.mapUserToResponse(user),
-      token,
+      accessToken,
+      refreshToken,
     };
   }
 
@@ -95,10 +97,10 @@ export class AuthService {
     });
   }
 
-  async refresh(refreshToken: string): Promise<{ token: string }> {
+  async refresh(oldRefreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
     // Find valid refresh token
     const storedToken = await prisma.refreshToken.findUnique({
-      where: { token: refreshToken },
+      where: { token: oldRefreshToken },
       include: { user: true },
     });
 
@@ -106,10 +108,16 @@ export class AuthService {
       throw new Error('Invalid or expired refresh token');
     }
 
-    // Generate new access token
-    const token = this.generateAccessToken(storedToken.userId);
+    // Delete old refresh token
+    await prisma.refreshToken.delete({
+      where: { id: storedToken.id },
+    });
 
-    return { token };
+    // Generate new tokens
+    const accessToken = this.generateAccessToken(storedToken.userId);
+    const refreshToken = await this.createRefreshToken(storedToken.userId);
+
+    return { accessToken, refreshToken };
   }
 
   async getUserById(userId: string): Promise<User | null> {

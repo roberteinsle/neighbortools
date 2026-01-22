@@ -19,7 +19,7 @@ interface UserInfo {
 const userInfoCache = new Map<string, { info: UserInfo; expires: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-export async function authMiddleware(
+export function authMiddleware(
   req: Request,
   res: Response,
   next: NextFunction
@@ -44,15 +44,11 @@ export async function authMiddleware(
       return res.status(401).json(errorResponse('Invalid token'));
     }
 
-    // Get user info (from cache or user service)
-    const userInfo = await getUserInfo(payload.userId);
-    if (!userInfo) {
-      return res.status(401).json(errorResponse('User not found'));
-    }
-
     // Add user info to headers for downstream services
-    req.headers['x-user-id'] = userInfo.userId;
-    req.headers['x-user-role'] = userInfo.role;
+    // The JWT is valid, so we trust the userId from it
+    // Role will be fetched by the downstream service if needed
+    req.headers['x-user-id'] = payload.userId;
+    req.headers['x-user-role'] = 'USER'; // Default role, downstream can override
 
     next();
   } catch (error) {

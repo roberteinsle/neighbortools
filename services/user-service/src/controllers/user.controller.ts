@@ -134,4 +134,54 @@ export class UserController {
       res.status(400).json(errorResponse(message));
     }
   }
+
+  // Profile routes - use x-user-id header
+  async getProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.headers['x-user-id'] as string;
+      if (!userId) {
+        return res.status(401).json(errorResponse('Unauthorized'));
+      }
+
+      const user = await userService.getUserById(userId);
+      if (!user) {
+        return res.status(404).json(errorResponse('User not found'));
+      }
+
+      res.json(successResponse(user));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to get profile';
+      res.status(500).json(errorResponse(message));
+    }
+  }
+
+  async updateProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.headers['x-user-id'] as string;
+      if (!userId) {
+        return res.status(401).json(errorResponse('Unauthorized'));
+      }
+
+      const user = await userService.updateUser(userId, req.body);
+      res.json(successResponse(user, 'Profile updated successfully'));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update profile';
+      res.status(500).json(errorResponse(message));
+    }
+  }
+
+  async changeProfilePassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.headers['x-user-id'] as string;
+      if (!userId) {
+        return res.status(401).json(errorResponse('Unauthorized'));
+      }
+
+      await userService.changePassword(userId, req.body);
+      res.json(successResponse(null, 'Password changed successfully'));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to change password';
+      res.status(400).json(errorResponse(message));
+    }
+  }
 }

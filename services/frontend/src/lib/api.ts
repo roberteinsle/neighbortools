@@ -117,7 +117,7 @@ export const authApi = {
 export const usersApi = {
   getProfile: () => api.get('/users/profile'),
   updateProfile: (data: Partial<{ firstName: string; lastName: string; language: string }>) =>
-    api.patch('/users/profile', data),
+    api.post('/users/profile', data), // Using POST instead of PATCH for proxy compatibility
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.post('/users/change-password', data),
 };
