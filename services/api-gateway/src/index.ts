@@ -1,11 +1,11 @@
-import express from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
 import { rateLimit } from 'express-rate-limit';
 import { authMiddleware } from './middleware/auth.middleware.js';
 import { setupProxyRoutes } from './routes/proxy.routes.js';
 import { errorResponse } from '@neighbortools/shared-utils';
 
-const app = express();
+const app: Express = express();
 const PORT = process.env.PORT || 3000;
 
 // Trust proxy for rate limiting behind reverse proxy

@@ -1,5 +1,6 @@
 import { Express, Request, Response } from 'express';
 import { createProxyMiddleware, Options } from 'http-proxy-middleware';
+import { ClientRequest, IncomingMessage, ServerResponse } from 'http';
 
 // Service URLs from environment
 const SERVICE_URLS = {
@@ -15,23 +16,22 @@ function createProxy(target: string, pathRewrite: Record<string, string>): Optio
     target,
     changeOrigin: true,
     pathRewrite,
-    on: {
-      proxyReq: (proxyReq, req: Request) => {
-        // Forward user info headers from auth middleware
-        if (req.headers['x-user-id']) {
-          proxyReq.setHeader('x-user-id', req.headers['x-user-id'] as string);
-        }
-        if (req.headers['x-user-role']) {
-          proxyReq.setHeader('x-user-role', req.headers['x-user-role'] as string);
-        }
-      },
-      error: (err, req, res) => {
-        console.error('Proxy error:', err);
-        (res as Response).status(502).json({
-          success: false,
-          error: 'Service temporarily unavailable',
-        });
-      },
+    onProxyReq: (proxyReq: ClientRequest, req: IncomingMessage) => {
+      // Forward user info headers from auth middleware
+      if (req.headers['x-user-id']) {
+        proxyReq.setHeader('x-user-id', req.headers['x-user-id'] as string);
+      }
+      if (req.headers['x-user-role']) {
+        proxyReq.setHeader('x-user-role', req.headers['x-user-role'] as string);
+      }
+    },
+    onError: (err: Error, req: IncomingMessage, res: ServerResponse) => {
+      console.error('Proxy error:', err);
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: false,
+        error: 'Service temporarily unavailable',
+      }));
     },
   };
 }
