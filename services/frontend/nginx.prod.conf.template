@@ -26,7 +26,9 @@ server {
 
     # Proxy API requests to the API Gateway (Railway internal networking)
     location /api/ {
-        proxy_pass http://${API_GATEWAY_HOST}:${API_GATEWAY_PORT};
+        resolver ${RESOLVER} valid=30s ipv6=off;
+        set $api_backend http://${API_GATEWAY_HOST}:${API_GATEWAY_PORT};
+        proxy_pass $api_backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

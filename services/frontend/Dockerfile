@@ -44,4 +44,4 @@ ENV API_GATEWAY_PORT=3000
 EXPOSE 80
 
 # Substitute env vars in nginx config and start nginx
-CMD ["/bin/sh", "-c", "envsubst '${PORT} ${API_GATEWAY_HOST} ${API_GATEWAY_PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "export RESOLVER=$(grep nameserver /etc/resolv.conf | head -1 | awk '{print $2}') && envsubst '${PORT} ${API_GATEWAY_HOST} ${API_GATEWAY_PORT} ${RESOLVER}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
