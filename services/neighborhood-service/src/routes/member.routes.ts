@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { MemberController } from '../controllers/member.controller.js';
 
-const router = Router();
+const router: Router = Router();
 const memberController = new MemberController();
 
 // PUT /members/:memberId/role - Update member role (admin/owner only)

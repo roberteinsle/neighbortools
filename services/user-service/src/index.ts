@@ -1,11 +1,11 @@
-import express from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
 import { PrismaClient } from '@prisma/client';
 import { authRouter } from './routes/auth.routes.js';
 import { userRouter } from './routes/user.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 
-const app = express();
+const app: Express = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 

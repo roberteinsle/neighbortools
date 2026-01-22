@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller.js';
 
-const router = Router();
+const router: Router = Router();
 const userController = new UserController();
 
 // Profile routes (use x-user-id header) - must be before /:id routes

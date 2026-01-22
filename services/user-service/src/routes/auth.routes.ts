@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller.js';
 
-const router = Router();
+const router: Router = Router();
 const authController = new AuthController();
 
 // POST /auth/register - Register new user

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { NeighborhoodController } from '../controllers/neighborhood.controller.js';
 
-const router = Router();
+const router: Router = Router();
 const neighborhoodController = new NeighborhoodController();
 
 // GET /neighborhoods - List neighborhoods for current user

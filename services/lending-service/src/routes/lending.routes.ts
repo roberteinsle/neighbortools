@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { LendingController } from '../controllers/lending.controller.js';
 
-const router = Router();
+const router: Router = Router();
 const lendingController = new LendingController();
 
 // GET /lendings - List lendings for current user

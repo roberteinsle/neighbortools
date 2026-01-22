@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ToolController } from '../controllers/tool.controller.js';
 import { upload } from '../middleware/upload.middleware.js';
 
-const router = Router();
+const router: Router = Router();
 const toolController = new ToolController();
 
 // GET /tools - List tools (with filters)

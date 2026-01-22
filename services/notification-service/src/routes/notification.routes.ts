@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { NotificationController } from '../controllers/notification.controller.js';
 
-const router = Router();
+const router: Router = Router();
 const notificationController = new NotificationController();
 
 // GET /notifications - List notifications for current user

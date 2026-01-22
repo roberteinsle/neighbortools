@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller.js';
 
-const router = Router();
+const router: Router = Router();
 const adminController = new AdminController();
 
 // GET /admin/smtp - Get SMTP configuration
