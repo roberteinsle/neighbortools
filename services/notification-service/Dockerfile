@@ -1,57 +1,60 @@
-# Production Dockerfile for Notification Service
-FROM node:18-alpine AS builder
-
-WORKDIR /app
-
-# Install pnpm
+FROM node:18-alpine AS base
 RUN npm install -g pnpm
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+# Dependencies stage
+FROM base AS deps
+WORKDIR /app
 
-# Install dependencies
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY packages/shared-types/package.json ./packages/shared-types/
+COPY packages/shared-utils/package.json ./packages/shared-utils/
+COPY services/notification-service/package.json ./services/notification-service/
+
 RUN pnpm install --frozen-lockfile
 
-# Copy prisma schema and generate client
-COPY prisma ./prisma
-RUN npx prisma generate
-
-# Copy source code
-COPY . .
-
-# Build TypeScript
-RUN pnpm run build
-
-# Production stage
-FROM node:18-alpine AS runner
-
+# Builder stage
+FROM base AS builder
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/shared-types/node_modules ./packages/shared-types/node_modules
+COPY --from=deps /app/packages/shared-utils/node_modules ./packages/shared-utils/node_modules
+COPY --from=deps /app/services/notification-service/node_modules ./services/notification-service/node_modules
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+COPY packages/shared-types ./packages/shared-types
+COPY packages/shared-utils ./packages/shared-utils
+COPY services/notification-service ./services/notification-service
 
-# Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile
+WORKDIR /app/packages/shared-types
+RUN pnpm build
 
-# Copy prisma schema and generated client
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+WORKDIR /app/packages/shared-utils
+RUN pnpm build
 
-# Copy built application
-COPY --from=builder /app/dist ./dist
+WORKDIR /app/services/notification-service
+RUN npx prisma generate
+RUN pnpm build
+
+# Production stage
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
+COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/
+COPY --from=builder /app/packages/shared-utils/dist ./packages/shared-utils/dist
+COPY --from=builder /app/packages/shared-utils/package.json ./packages/shared-utils/
+COPY --from=builder /app/services/notification-service/dist ./services/notification-service/dist
+COPY --from=builder /app/services/notification-service/package.json ./services/notification-service/
+COPY --from=builder /app/services/notification-service/prisma ./services/notification-service/prisma
+COPY --from=builder /app/services/notification-service/node_modules ./services/notification-service/node_modules
 
 # Copy email templates
-COPY --from=builder /app/src/templates ./dist/templates
+COPY --from=builder /app/services/notification-service/src/templates ./services/notification-service/dist/templates
 
-# Expose port
+WORKDIR /app/services/notification-service
+
 EXPOSE 3005
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3005/health || exit 1
-
-# Run migrations and start server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/index.js"]

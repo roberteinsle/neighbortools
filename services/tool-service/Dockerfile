@@ -60,4 +60,4 @@ RUN mkdir -p uploads
 
 EXPOSE 3002
 
-CMD ["node", "dist/index.js"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/index.js"]

@@ -1,37 +1,47 @@
 # Production Dockerfile for Frontend
-FROM node:18-alpine AS builder
-
-WORKDIR /app
-
-# Install pnpm
+FROM node:18-alpine AS base
 RUN npm install -g pnpm
 
-# Copy package files
-COPY package.json pnpm-lock.yaml* ./
+# Dependencies stage
+FROM base AS deps
+WORKDIR /app
+
+# Copy workspace config
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY services/frontend/package.json ./services/frontend/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
+# Builder stage
+FROM base AS builder
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/services/frontend/node_modules ./services/frontend/node_modules
+
 # Copy source code
-COPY . .
+COPY services/frontend ./services/frontend
 
 # Build the application
+WORKDIR /app/services/frontend
 RUN pnpm run build
 
 # Production stage with nginx
 FROM nginx:alpine AS runner
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config template for production
+COPY services/frontend/nginx.prod.conf.template /etc/nginx/templates/default.conf.template
 
 # Copy built assets from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/services/frontend/dist /usr/share/nginx/html
 
-# Expose port
+# Default environment variables (overridden by Railway)
+ENV PORT=80
+ENV API_GATEWAY_HOST=api-gateway.railway.internal
+ENV API_GATEWAY_PORT=3000
+
 EXPOSE 80
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]
+# Substitute env vars in nginx config and start nginx
+CMD ["/bin/sh", "-c", "envsubst '${PORT} ${API_GATEWAY_HOST} ${API_GATEWAY_PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
