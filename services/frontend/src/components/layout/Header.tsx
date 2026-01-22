@@ -89,7 +89,7 @@ export function Header() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/settings" className="cursor-pointer">
+                    <Link to="/profile" className="cursor-pointer">
                       <Settings className="mr-2 h-4 w-4" />
                       {t('nav.settings')}
                     </Link>
