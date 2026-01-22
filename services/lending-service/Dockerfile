@@ -1,5 +1,5 @@
 FROM node:18-alpine AS base
-RUN npm install -g pnpm
+RUN apk add --no-cache openssl && npm install -g pnpm
 
 # Dependencies stage
 FROM base AS deps
