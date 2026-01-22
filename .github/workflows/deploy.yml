@@ -1,0 +1,59 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy API Gateway
+        run: railway up --service api-gateway
+        working-directory: ./services/api-gateway
+
+      - name: Deploy User Service
+        run: railway up --service user-service
+        working-directory: ./services/user-service
+
+      - name: Deploy Tool Service
+        run: railway up --service tool-service
+        working-directory: ./services/tool-service
+
+      - name: Deploy Lending Service
+        run: railway up --service lending-service
+        working-directory: ./services/lending-service
+
+      - name: Deploy Neighborhood Service
+        run: railway up --service neighborhood-service
+        working-directory: ./services/neighborhood-service
+
+      - name: Deploy Notification Service
+        run: railway up --service notification-service
+        working-directory: ./services/notification-service
+
+      - name: Deploy Frontend
+        run: railway up --service frontend
+        working-directory: ./services/frontend
+
+      - name: Notify deployment success
+        if: success()
+        run: echo "Deployment successful!"
+
+      - name: Notify deployment failure
+        if: failure()
+        run: echo "Deployment failed!"

@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Neighborhood {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  inviteCode  String   @unique @map("invite_code")
+  createdBy   String   @map("created_by")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members NeighborhoodMember[]
+
+  @@map("neighborhoods")
+}
+
+model NeighborhoodMember {
+  id             String     @id @default(uuid())
+  neighborhoodId String     @map("neighborhood_id")
+  userId         String     @map("user_id")
+  role           MemberRole @default(MEMBER)
+  joinedAt       DateTime   @default(now()) @map("joined_at")
+
+  neighborhood Neighborhood @relation(fields: [neighborhoodId], references: [id], onDelete: Cascade)
+
+  @@unique([neighborhoodId, userId])
+  @@map("neighborhood_members")
+}
+
+model NeighborhoodInvite {
+  id             String    @id @default(uuid())
+  neighborhoodId String    @map("neighborhood_id")
+  invitedBy      String    @map("invited_by")
+  invitedEmail   String    @map("invited_email")
+  status         InviteStatus @default(PENDING)
+  expiresAt      DateTime  @map("expires_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  usedAt         DateTime? @map("used_at")
+
+  @@map("neighborhood_invites")
+}
+
+enum MemberRole {
+  MEMBER
+  ADMIN
+  OWNER
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}

@@ -1,0 +1,150 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useAuthStore } from '@/context/auth-store';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Wrench } from 'lucide-react';
+
+const registerSchema = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(8),
+  confirmPassword: z.string().min(8),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+type RegisterForm = z.infer<typeof registerSchema>;
+
+export function RegisterPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { register: registerUser, error, clearError } = useAuthStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+  });
+
+  const onSubmit = async (data: RegisterForm) => {
+    setIsSubmitting(true);
+    clearError();
+    try {
+      await registerUser({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
+      navigate('/', { replace: true });
+    } catch {
+      // Error is handled by the store
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-[80vh] items-center justify-center">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <Wrench className="h-12 w-12 text-primary" />
+          </div>
+          <CardTitle className="text-2xl">{t('auth.register')}</CardTitle>
+          <CardDescription>
+            {t('common.appName')}
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <CardContent className="space-y-4">
+            {error && (
+              <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+                {error}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">{t('auth.firstName')}</Label>
+                <Input
+                  id="firstName"
+                  {...register('firstName')}
+                />
+                {errors.firstName && (
+                  <p className="text-sm text-destructive">{t('errors.required')}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">{t('auth.lastName')}</Label>
+                <Input
+                  id="lastName"
+                  {...register('lastName')}
+                />
+                {errors.lastName && (
+                  <p className="text-sm text-destructive">{t('errors.required')}</p>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">{t('auth.email')}</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@example.com"
+                {...register('email')}
+              />
+              {errors.email && (
+                <p className="text-sm text-destructive">{t('errors.invalidEmail')}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">{t('auth.password')}</Label>
+              <Input
+                id="password"
+                type="password"
+                {...register('password')}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">{t('errors.passwordTooShort')}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                {...register('confirmPassword')}
+              />
+              {errors.confirmPassword && (
+                <p className="text-sm text-destructive">{t('errors.passwordsDoNotMatch')}</p>
+              )}
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? t('common.loading') : t('auth.register')}
+            </Button>
+            <p className="text-sm text-muted-foreground text-center">
+              {t('auth.hasAccount')}{' '}
+              <Link to="/login" className="text-primary hover:underline">
+                {t('auth.login')}
+              </Link>
+            </p>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
+  );
+}

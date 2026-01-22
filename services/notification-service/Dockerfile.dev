@@ -1,0 +1,40 @@
+# Development Dockerfile for notification-service
+FROM node:18-alpine
+
+# Install system dependencies
+RUN apk add --no-cache openssl
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy workspace config
+COPY package.json pnpm-workspace.yaml ./
+
+# Copy shared packages
+COPY packages/shared-types ./packages/shared-types
+COPY packages/shared-utils ./packages/shared-utils
+
+# Copy service package
+COPY services/notification-service ./services/notification-service
+
+# Install all dependencies
+RUN pnpm install
+
+# Build shared packages
+WORKDIR /app/packages/shared-types
+RUN pnpm build
+
+WORKDIR /app/packages/shared-utils
+RUN pnpm build
+
+# Generate Prisma client
+WORKDIR /app/services/notification-service
+RUN npx prisma generate
+
+# Expose port
+EXPOSE 3005
+
+# Start development server
+CMD ["sh", "-c", "npx prisma migrate deploy && pnpm run dev"]

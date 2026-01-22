@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false) @map("is_read")
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+model EmailLog {
+  id          String      @id @default(uuid())
+  recipient   String
+  subject     String
+  templateKey String      @map("template_key")
+  status      EmailStatus @default(PENDING)
+  error       String?
+  sentAt      DateTime?   @map("sent_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  @@index([status])
+  @@index([recipient])
+  @@map("email_logs")
+}
+
+model SmtpConfig {
+  id        String   @id @default(uuid())
+  host      String
+  port      Int
+  secure    Boolean  @default(false)
+  user      String
+  password  String
+  fromEmail String   @map("from_email")
+  fromName  String   @map("from_name")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("smtp_config")
+}
+
+model ScheduledNotification {
+  id          String               @id @default(uuid())
+  userId      String               @map("user_id")
+  type        NotificationType
+  templateKey String               @map("template_key")
+  data        Json?
+  scheduledAt DateTime             @map("scheduled_at")
+  status      ScheduledStatus      @default(PENDING)
+  processedAt DateTime?            @map("processed_at")
+  error       String?
+  createdAt   DateTime             @default(now()) @map("created_at")
+
+  @@index([scheduledAt, status])
+  @@map("scheduled_notifications")
+}
+
+enum NotificationType {
+  LENDING_REQUEST
+  LENDING_APPROVED
+  LENDING_REJECTED
+  LENDING_REMINDER
+  LENDING_OVERDUE
+  NEIGHBORHOOD_INVITE
+  NEIGHBORHOOD_JOINED
+  WELCOME
+  SYSTEM
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum ScheduledStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}

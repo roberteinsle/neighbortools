@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tool {
+  id             String        @id @default(uuid())
+  name           String
+  description    String
+  category       ToolCategory
+  condition      ToolCondition
+  ownerId        String        @map("owner_id")
+  neighborhoodId String        @map("neighborhood_id")
+  isAvailable    Boolean       @default(true) @map("is_available")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  images ToolImage[]
+
+  @@index([neighborhoodId])
+  @@index([ownerId])
+  @@index([category])
+  @@map("tools")
+}
+
+model ToolImage {
+  id        String   @id @default(uuid())
+  toolId    String   @map("tool_id")
+  filename  String
+  originalName String @map("original_name")
+  mimeType  String   @map("mime_type")
+  size      Int
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tool Tool @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@map("tool_images")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  nameEn      String   @map("name_en")
+  nameDe      String   @map("name_de")
+  nameEs      String   @map("name_es")
+  nameFr      String   @map("name_fr")
+  icon        String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("categories")
+}
+
+enum ToolCategory {
+  HAND_TOOLS
+  POWER_TOOLS
+  GARDEN
+  AUTOMOTIVE
+  CLEANING
+  PAINTING
+  PLUMBING
+  ELECTRICAL
+  OTHER
+}
+
+enum ToolCondition {
+  NEW
+  GOOD
+  FAIR
+  POOR
+}

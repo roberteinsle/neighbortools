@@ -1,0 +1,177 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: neighbortools-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-neighbortools}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-neighbortools}
+      POSTGRES_DB: ${POSTGRES_DB:-neighbortools}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-neighbortools}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - neighbortools-network
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile.dev
+    container_name: neighbortools-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
+      - USER_SERVICE_URL=http://user-service:3001
+      - TOOL_SERVICE_URL=http://tool-service:3002
+      - LENDING_SERVICE_URL=http://lending-service:3003
+      - NEIGHBORHOOD_SERVICE_URL=http://neighborhood-service:3004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3005
+    depends_on:
+      - user-service
+      - neighborhood-service
+      - tool-service
+      - lending-service
+      - notification-service
+    networks:
+      - neighbortools-network
+    volumes:
+      - ./services/api-gateway/src:/app/services/api-gateway/src
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile.dev
+    container_name: neighbortools-user-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-neighbortools}:${POSTGRES_PASSWORD:-neighbortools}@postgres:5432/user_db
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - neighbortools-network
+    volumes:
+      - ./services/user-service/src:/app/services/user-service/src
+
+  tool-service:
+    build:
+      context: .
+      dockerfile: services/tool-service/Dockerfile.dev
+    container_name: neighbortools-tool-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-neighbortools}:${POSTGRES_PASSWORD:-neighbortools}@postgres:5432/tool_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - neighbortools-network
+    volumes:
+      - ./services/tool-service/src:/app/services/tool-service/src
+      - tool_uploads:/app/services/tool-service/uploads
+
+  lending-service:
+    build:
+      context: .
+      dockerfile: services/lending-service/Dockerfile.dev
+    container_name: neighbortools-lending-service
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-neighbortools}:${POSTGRES_PASSWORD:-neighbortools}@postgres:5432/lending_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - neighbortools-network
+    volumes:
+      - ./services/lending-service/src:/app/services/lending-service/src
+
+  neighborhood-service:
+    build:
+      context: .
+      dockerfile: services/neighborhood-service/Dockerfile.dev
+    container_name: neighbortools-neighborhood-service
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=development
+      - PORT=3004
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-neighbortools}:${POSTGRES_PASSWORD:-neighbortools}@postgres:5432/neighborhood_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - neighbortools-network
+    volumes:
+      - ./services/neighborhood-service/src:/app/services/neighborhood-service/src
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile.dev
+    container_name: neighbortools-notification-service
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=development
+      - PORT=3005
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-neighbortools}:${POSTGRES_PASSWORD:-neighbortools}@postgres:5432/notification_db
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-noreply@neighbortools.net}
+      - APP_URL=${APP_URL:-http://localhost:5173}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - neighbortools-network
+    volumes:
+      - ./services/notification-service/src:/app/services/notification-service/src
+
+  frontend:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile.dev
+    container_name: neighbortools-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=/api
+    depends_on:
+      - api-gateway
+    networks:
+      - neighbortools-network
+    # No volume mounts to preserve node_modules from build
+
+networks:
+  neighbortools-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  tool_uploads:
+  frontend_node_modules:

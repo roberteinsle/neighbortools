@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lending {
+  id             String        @id @default(uuid())
+  toolId         String        @map("tool_id")
+  toolName       String        @map("tool_name")
+  borrowerId     String        @map("borrower_id")
+  lenderId       String        @map("lender_id")
+  neighborhoodId String        @map("neighborhood_id")
+  status         LendingStatus @default(PENDING)
+  message        String?
+  requestedAt    DateTime      @default(now()) @map("requested_at")
+  respondedAt    DateTime?     @map("responded_at")
+  startDate      DateTime      @map("start_date")
+  endDate        DateTime      @map("end_date")
+  actualStartDate DateTime?    @map("actual_start_date")
+  actualEndDate   DateTime?    @map("actual_end_date")
+  returnedAt     DateTime?     @map("returned_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  history LendingHistory[]
+
+  @@index([borrowerId])
+  @@index([lenderId])
+  @@index([toolId])
+  @@index([status])
+  @@index([neighborhoodId])
+  @@map("lendings")
+}
+
+model LendingHistory {
+  id        String        @id @default(uuid())
+  lendingId String        @map("lending_id")
+  status    LendingStatus
+  changedBy String        @map("changed_by")
+  note      String?
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  lending Lending @relation(fields: [lendingId], references: [id], onDelete: Cascade)
+
+  @@map("lending_history")
+}
+
+model LendingReminder {
+  id        String       @id @default(uuid())
+  lendingId String       @map("lending_id")
+  type      ReminderType
+  sendAt    DateTime     @map("send_at")
+  sentAt    DateTime?    @map("sent_at")
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@index([sendAt, sentAt])
+  @@map("lending_reminders")
+}
+
+enum LendingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ACTIVE
+  RETURNED
+  CANCELLED
+  OVERDUE
+}
+
+enum ReminderType {
+  PICKUP_REMINDER
+  RETURN_REMINDER
+  OVERDUE_NOTICE
+}

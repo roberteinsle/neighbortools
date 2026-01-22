@@ -1,0 +1,42 @@
+{
+  "name": "neighbortools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Microservice-based Tool Sharing Platform for Neighborhood Communities",
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run tests/integration",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "format": "pnpm -r run format",
+    "db:migrate": "./scripts/migrate-all.sh",
+    "db:reset": "pnpm -r exec prisma migrate reset --force",
+    "seed": "pnpm --filter user-service run seed",
+    "clean": "pnpm -r run clean && rm -rf node_modules",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "keywords": [
+    "tool-sharing",
+    "neighborhood",
+    "microservices",
+    "lending"
+  ],
+  "author": "Robert Einsle <robert@einsle.com>",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "devDependencies": {
+    "vitest": "^1.1.0",
+    "@vitest/coverage-v8": "^1.1.0",
+    "typescript": "^5.3.3"
+  }
+}

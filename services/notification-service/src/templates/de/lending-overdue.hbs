@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Überfällige Ausleihe</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; }
+    .header { background: #dc2626; color: white; padding: 20px; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; }
+    .content { padding: 30px; }
+    .details { background: #fef2f2; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #dc2626; }
+    .button { display: inline-block; background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+    .footer { background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Überfällige Ausleihe</h1>
+    </div>
+    <div class="content">
+      <h2>Hallo {{userName}},</h2>
+      <p>Die Rückgabe für folgendes Werkzeug ist <strong>überfällig</strong>:</p>
+      <div class="details">
+        <p><strong>Werkzeug:</strong> {{toolName}}</p>
+        <p><strong>Fällig am:</strong> {{dueDate}}</p>
+        <p><strong>Überfällig seit:</strong> {{daysOverdue}} Tag(en)</p>
+        <p><strong>Besitzer:</strong> {{lenderName}}</p>
+      </div>
+      <p>Bitte bringe das Werkzeug so schnell wie möglich zurück oder kontaktiere {{lenderName}} um eine Verlängerung zu vereinbaren.</p>
+      <a href="{{appUrl}}/lendings/{{lendingId}}" class="button">Ausleihe ansehen</a>
+    </div>
+    <div class="footer">
+      <p>&copy; NeighborTools. Alle Rechte vorbehalten.</p>
+    </div>
+  </div>
+</body>
+</html>

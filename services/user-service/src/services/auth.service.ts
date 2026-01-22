@@ -1,0 +1,165 @@
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
+import type { CreateUserDto, LoginDto, AuthResponse, User } from '@neighbortools/shared-types';
+import { isValidEmail, isValidPassword } from '@neighbortools/shared-utils';
+
+const prisma = new PrismaClient();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const JWT_EXPIRES_IN = '15m';
+const REFRESH_TOKEN_EXPIRES_DAYS = 7;
+
+export class AuthService {
+  async register(dto: CreateUserDto): Promise<AuthResponse> {
+    // Validate email
+    if (!isValidEmail(dto.email)) {
+      throw new Error('Invalid email format');
+    }
+
+    // Validate password
+    if (!isValidPassword(dto.password)) {
+      throw new Error('Password must be at least 8 characters with uppercase, lowercase, and number');
+    }
+
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+
+    if (existingUser) {
+      throw new Error('User with this email already exists');
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    // Create user
+    const user = await prisma.user.create({
+      data: {
+        email: dto.email.toLowerCase(),
+        passwordHash,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        language: dto.language || 'EN',
+        settings: {
+          create: {},
+        },
+      },
+    });
+
+    // Generate tokens
+    const token = this.generateAccessToken(user.id);
+    await this.createRefreshToken(user.id);
+
+    return {
+      user: this.mapUserToResponse(user),
+      token,
+    };
+  }
+
+  async login(dto: LoginDto): Promise<AuthResponse> {
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+
+    if (!user) {
+      throw new Error('Invalid email or password');
+    }
+
+    if (!user.isActive) {
+      throw new Error('Account is deactivated');
+    }
+
+    // Verify password
+    const isValidPass = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!isValidPass) {
+      throw new Error('Invalid email or password');
+    }
+
+    // Generate tokens
+    const token = this.generateAccessToken(user.id);
+    await this.createRefreshToken(user.id);
+
+    return {
+      user: this.mapUserToResponse(user),
+      token,
+    };
+  }
+
+  async logout(userId: string): Promise<void> {
+    // Delete all refresh tokens for user
+    await prisma.refreshToken.deleteMany({
+      where: { userId },
+    });
+  }
+
+  async refresh(refreshToken: string): Promise<{ token: string }> {
+    // Find valid refresh token
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+      include: { user: true },
+    });
+
+    if (!storedToken || storedToken.expiresAt < new Date()) {
+      throw new Error('Invalid or expired refresh token');
+    }
+
+    // Generate new access token
+    const token = this.generateAccessToken(storedToken.userId);
+
+    return { token };
+  }
+
+  async getUserById(userId: string): Promise<User | null> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) return null;
+
+    return this.mapUserToResponse(user) as User;
+  }
+
+  async verifyToken(token: string): Promise<{ userId: string } | null> {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET) as { userId: string };
+      return payload;
+    } catch {
+      return null;
+    }
+  }
+
+  private generateAccessToken(userId: string): string {
+    return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  }
+
+  private async createRefreshToken(userId: string): Promise<string> {
+    const token = jwt.sign({ userId, type: 'refresh' }, JWT_SECRET);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRES_DAYS);
+
+    await prisma.refreshToken.create({
+      data: {
+        userId,
+        token,
+        expiresAt,
+      },
+    });
+
+    return token;
+  }
+
+  private mapUserToResponse(user: any): Omit<User, 'createdAt' | 'updatedAt'> {
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      language: user.language,
+      role: user.role,
+      isActive: user.isActive,
+    };
+  }
+}
