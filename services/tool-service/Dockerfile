@@ -44,6 +44,9 @@ ENV NODE_ENV=production
 # Install sharp dependencies for image processing
 RUN apk add --no-cache vips-dev
 
+# Copy root node_modules (pnpm uses symlinks from service node_modules to root .pnpm store)
+COPY --from=builder /app/node_modules ./node_modules
+
 COPY --from=builder /app/packages/shared-types/dist ./packages/shared-types/dist
 COPY --from=builder /app/packages/shared-types/package.json ./packages/shared-types/
 COPY --from=builder /app/packages/shared-utils/dist ./packages/shared-utils/dist
