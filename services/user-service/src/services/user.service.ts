@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import type { User, PaginationParams } from '@neighbortools/shared-types';
-import { calculateOffset, isValidPassword } from '@neighbortools/shared-utils';
+import { calculateOffset, validatePassword } from '@neighbortools/shared-utils';
 
 const prisma = new PrismaClient();
 
@@ -52,12 +52,13 @@ export class UserService {
   }
 
   async updateUser(id: string, dto: UpdateUserDto): Promise<User> {
+    const language = dto.language?.toUpperCase() as UpdateUserDto['language'];
     const user = await prisma.user.update({
       where: { id },
       data: {
         ...(dto.firstName && { firstName: dto.firstName }),
         ...(dto.lastName && { lastName: dto.lastName }),
-        ...(dto.language && { language: dto.language }),
+        ...(language && { language }),
       },
     });
 
@@ -112,8 +113,16 @@ export class UserService {
     }
 
     // Validate new password
-    if (!isValidPassword(dto.newPassword)) {
-      throw new Error('New password must be at least 8 characters with uppercase, lowercase, and number');
+    const passwordErrors = validatePassword(dto.newPassword, user.email);
+    if (passwordErrors.length > 0) {
+      const errorMessages: Record<string, string> = {
+        tooShort: 'Password must be at least 12 characters',
+        tooLong: 'Password must not exceed 64 characters',
+        containsEmail: 'Password must not contain your email address',
+        repetitive: 'Password must not consist of repeating patterns',
+        tooCommon: 'This password is too common and easily guessable',
+      };
+      throw new Error(passwordErrors.map(e => errorMessages[e]).join('. '));
     }
 
     // Hash and update password

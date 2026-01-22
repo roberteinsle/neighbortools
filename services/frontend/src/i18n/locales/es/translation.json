@@ -141,7 +141,10 @@
     "language": "Idioma",
     "notifications": "Notificaciones",
     "emailNotifications": "Notificaciones por email",
-    "memberSince": "Miembro desde"
+    "memberSince": "Miembro desde",
+    "updateSuccess": "Perfil actualizado correctamente",
+    "passwordChanged": "Contraseña cambiada correctamente",
+    "passwordValid": "La contraseña cumple todos los requisitos"
   },
   "admin": {
     "title": "Panel de Admin",
@@ -157,7 +160,11 @@
   "errors": {
     "required": "Este campo es obligatorio",
     "invalidEmail": "Correo electrónico inválido",
-    "passwordTooShort": "La contraseña debe tener al menos 8 caracteres",
+    "passwordTooShort": "La contraseña debe tener al menos 12 caracteres",
+    "passwordTooLong": "La contraseña no debe exceder los 64 caracteres",
+    "passwordContainsEmail": "La contraseña no debe contener tu dirección de correo",
+    "passwordRepetitive": "La contraseña no debe consistir en patrones repetitivos",
+    "passwordTooCommon": "Esta contraseña es demasiado común y fácil de adivinar",
     "passwordsDoNotMatch": "Las contraseñas no coinciden",
     "networkError": "Error de red. Por favor, inténtalo de nuevo.",
     "unauthorized": "No tienes autorización para realizar esta acción",

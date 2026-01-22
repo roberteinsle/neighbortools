@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import type { CreateUserDto, LoginDto, AuthResponse, User } from '@neighbortools/shared-types';
-import { isValidEmail, isValidPassword } from '@neighbortools/shared-utils';
+import { isValidEmail, validatePassword } from '@neighbortools/shared-utils';
 
 const prisma = new PrismaClient();
 
@@ -18,8 +18,16 @@ export class AuthService {
     }
 
     // Validate password
-    if (!isValidPassword(dto.password)) {
-      throw new Error('Password must be at least 8 characters with uppercase, lowercase, and number');
+    const passwordErrors = validatePassword(dto.password, dto.email);
+    if (passwordErrors.length > 0) {
+      const errorMessages: Record<string, string> = {
+        tooShort: 'Password must be at least 12 characters',
+        tooLong: 'Password must not exceed 64 characters',
+        containsEmail: 'Password must not contain your email address',
+        repetitive: 'Password must not consist of repeating patterns',
+        tooCommon: 'This password is too common and easily guessable',
+      };
+      throw new Error(passwordErrors.map(e => errorMessages[e]).join('. '));
     }
 
     // Check if user exists

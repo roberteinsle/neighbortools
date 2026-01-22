@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { User, Lock, Globe } from 'lucide-react';
+import { User, Lock, Globe, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/context/auth-store';
 import { usersApi } from '@/lib/api';
+import { validatePassword, getPasswordErrorKey } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +32,18 @@ export function ProfilePage() {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
   });
+  const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  // Sync profileData when user changes
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+      });
+    }
+  }, [user]);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -44,6 +57,8 @@ export function ProfilePage() {
     onSuccess: (response) => {
       if (response.data.data) {
         updateUser(response.data.data);
+        setUpdateSuccess(true);
+        setTimeout(() => setUpdateSuccess(false), 3000);
       }
     },
   });
@@ -53,6 +68,8 @@ export function ProfilePage() {
       usersApi.changePassword(data),
     onSuccess: () => {
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordSuccess(true);
+      setTimeout(() => setPasswordSuccess(false), 3000);
     },
   });
 
@@ -60,15 +77,21 @@ export function ProfilePage() {
     e.preventDefault();
     updateProfileMutation.mutate({
       ...profileData,
-      language: selectedLanguage,
+      language: selectedLanguage.toUpperCase(),
     });
   };
 
+  const passwordErrors = useMemo(() => {
+    if (!passwordData.newPassword) return [];
+    return validatePassword(passwordData.newPassword, user?.email);
+  }, [passwordData.newPassword, user?.email]);
+
+  const isPasswordValid = passwordData.newPassword.length > 0 && passwordErrors.length === 0;
+
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      return;
-    }
+    if (passwordErrors.length > 0) return;
+    if (passwordData.newPassword !== passwordData.confirmPassword) return;
     changePasswordMutation.mutate({
       currentPassword: passwordData.currentPassword,
       newPassword: passwordData.newPassword,
@@ -133,9 +156,17 @@ export function ProfilePage() {
                     />
                   </div>
                 </div>
-                <Button type="submit" disabled={updateProfileMutation.isPending}>
-                  {updateProfileMutation.isPending ? t('common.loading') : t('common.save')}
-                </Button>
+                <div className="flex items-center gap-4">
+                  <Button type="submit" disabled={updateProfileMutation.isPending}>
+                    {updateProfileMutation.isPending ? t('common.loading') : t('common.save')}
+                  </Button>
+                  {updateSuccess && (
+                    <span className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      {t('profile.updateSuccess')}
+                    </span>
+                  )}
+                </div>
               </form>
             </CardContent>
           </Card>
@@ -165,6 +196,22 @@ export function ProfilePage() {
                     value={passwordData.newPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
                   />
+                  {passwordData.newPassword && passwordErrors.length > 0 && (
+                    <div className="space-y-1">
+                      {passwordErrors.map((error) => (
+                        <p key={error} className="flex items-center gap-1.5 text-sm text-destructive">
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                          {t(getPasswordErrorKey(error))}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {isPasswordValid && (
+                    <p className="flex items-center gap-1.5 text-sm text-green-600">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      {t('profile.passwordValid')}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
@@ -179,17 +226,25 @@ export function ProfilePage() {
                     <p className="text-sm text-destructive">{t('errors.passwordsDoNotMatch')}</p>
                   )}
                 </div>
-                <Button
-                  type="submit"
-                  disabled={
-                    changePasswordMutation.isPending ||
-                    !passwordData.currentPassword ||
-                    !passwordData.newPassword ||
-                    passwordData.newPassword !== passwordData.confirmPassword
-                  }
-                >
-                  {changePasswordMutation.isPending ? t('common.loading') : t('common.save')}
-                </Button>
+                <div className="flex items-center gap-4">
+                  <Button
+                    type="submit"
+                    disabled={
+                      changePasswordMutation.isPending ||
+                      !passwordData.currentPassword ||
+                      !isPasswordValid ||
+                      passwordData.newPassword !== passwordData.confirmPassword
+                    }
+                  >
+                    {changePasswordMutation.isPending ? t('common.loading') : t('common.save')}
+                  </Button>
+                  {passwordSuccess && (
+                    <span className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      {t('profile.passwordChanged')}
+                    </span>
+                  )}
+                </div>
               </form>
             </CardContent>
           </Card>
@@ -217,7 +272,7 @@ export function ProfilePage() {
                 </Select>
               </div>
               <Button
-                onClick={() => updateProfileMutation.mutate({ ...profileData, language: selectedLanguage })}
+                onClick={() => updateProfileMutation.mutate({ ...profileData, language: selectedLanguage.toUpperCase() })}
                 disabled={updateProfileMutation.isPending}
               >
                 {updateProfileMutation.isPending ? t('common.loading') : t('common.save')}

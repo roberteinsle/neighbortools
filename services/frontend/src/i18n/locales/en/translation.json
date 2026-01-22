@@ -141,7 +141,10 @@
     "language": "Language",
     "notifications": "Notifications",
     "emailNotifications": "Email Notifications",
-    "memberSince": "Member since"
+    "memberSince": "Member since",
+    "updateSuccess": "Profile updated successfully",
+    "passwordChanged": "Password changed successfully",
+    "passwordValid": "Password meets all requirements"
   },
   "admin": {
     "title": "Admin Panel",
@@ -157,7 +160,11 @@
   "errors": {
     "required": "This field is required",
     "invalidEmail": "Invalid email address",
-    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordTooShort": "Password must be at least 12 characters",
+    "passwordTooLong": "Password must not exceed 64 characters",
+    "passwordContainsEmail": "Password must not contain your email address",
+    "passwordRepetitive": "Password must not consist of repeating patterns",
+    "passwordTooCommon": "This password is too common and easily guessable",
     "passwordsDoNotMatch": "Passwords do not match",
     "networkError": "Network error. Please try again.",
     "unauthorized": "You are not authorized to perform this action",

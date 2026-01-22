@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
@@ -9,14 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wrench } from 'lucide-react';
+import { Wrench, CheckCircle, AlertCircle } from 'lucide-react';
+import { validatePassword, getPasswordErrorKey } from '@/lib/utils';
 
 const registerSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   email: z.string().email(),
-  password: z.string().min(8),
-  confirmPassword: z.string().min(8),
+  password: z.string().min(12),
+  confirmPassword: z.string().min(1),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
@@ -33,10 +34,21 @@ export function RegisterPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
   });
+
+  const watchedPassword = watch('password', '');
+  const watchedEmail = watch('email', '');
+
+  const passwordErrors = useMemo(() => {
+    if (!watchedPassword) return [];
+    return validatePassword(watchedPassword, watchedEmail);
+  }, [watchedPassword, watchedEmail]);
+
+  const isPasswordValid = watchedPassword.length > 0 && passwordErrors.length === 0;
 
   const onSubmit = async (data: RegisterForm) => {
     setIsSubmitting(true);
@@ -116,7 +128,23 @@ export function RegisterPage() {
                 type="password"
                 {...register('password')}
               />
-              {errors.password && (
+              {watchedPassword && passwordErrors.length > 0 && (
+                <div className="space-y-1">
+                  {passwordErrors.map((error) => (
+                    <p key={error} className="flex items-center gap-1.5 text-sm text-destructive">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      {t(getPasswordErrorKey(error))}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {isPasswordValid && (
+                <p className="flex items-center gap-1.5 text-sm text-green-600">
+                  <CheckCircle className="h-3.5 w-3.5" />
+                  {t('profile.passwordValid')}
+                </p>
+              )}
+              {!watchedPassword && errors.password && (
                 <p className="text-sm text-destructive">{t('errors.passwordTooShort')}</p>
               )}
             </div>
