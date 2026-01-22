@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 NeighborTools.net is a microservice-based tool sharing platform for neighborhood communities. Users can manage personal tool inventories, share them within neighborhoods, and handle lending workflows.
 
-**Status**: Architecture planned, implementation in progress.
+**Status**: Core implementation complete, frontend and services functional.
 
 ## Development Phases
 
@@ -97,6 +97,18 @@ npx prisma validate                              # Validate schema
 npx prisma migrate reset                         # Reset database
 ```
 
+### Initial Database Setup (in Docker)
+
+After starting containers for the first time, push schemas to create tables:
+
+```bash
+docker exec neighbortools-user-service npx prisma db push
+docker exec neighbortools-tool-service npx prisma db push
+docker exec neighbortools-lending-service npx prisma db push
+docker exec neighbortools-neighborhood-service npx prisma db push
+docker exec neighbortools-notification-service npx prisma db push
+```
+
 ## Architecture
 
 ### Microservices (7 services)
@@ -133,9 +145,11 @@ scripts/
 ### Key Architectural Decisions
 
 - **Database per service**: Each microservice has its own Prisma schema and database
-- **JWT authentication**: Implemented in api-gateway, tokens validated on each request
+- **JWT authentication**: Implemented in api-gateway, tokens validated on each request (synchronous, no external calls)
 - **Inter-service communication**: Services communicate via internal HTTP (Railway private networking in prod)
 - **i18n**: Frontend uses i18next; notification-service has language-specific email templates in `src/templates/[lang]/`
+- **Profile updates use POST**: Frontend uses POST instead of PATCH for `/api/users/profile` due to GitHub Codespaces proxy issues with PATCH request bodies
+- **No body parsing in gateway**: API Gateway does not parse request bodies; raw body is forwarded directly to microservices
 
 ## Tech Stack
 
