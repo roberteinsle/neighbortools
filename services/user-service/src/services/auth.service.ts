@@ -9,6 +9,7 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const JWT_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_DAYS = 7;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.toLowerCase();
 
 export class AuthService {
   async register(dto: CreateUserDto): Promise<{ user: Omit<User, 'createdAt' | 'updatedAt'>; accessToken: string; refreshToken: string }> {
@@ -42,6 +43,9 @@ export class AuthService {
     // Hash password
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
+    // Check if this email should be admin
+    const isAdmin = ADMIN_EMAIL && dto.email.toLowerCase() === ADMIN_EMAIL;
+
     // Create user
     const user = await prisma.user.create({
       data: {
@@ -50,6 +54,7 @@ export class AuthService {
         firstName: dto.firstName,
         lastName: dto.lastName,
         language: dto.language || 'EN',
+        role: isAdmin ? 'ADMIN' : 'USER',
         settings: {
           create: {},
         },
