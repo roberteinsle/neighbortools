@@ -156,3 +156,42 @@ export interface ApiError {
   error: string;
   message: string;
 }
+
+// Admin types
+export interface SmtpConfig {
+  id?: string;
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  fromEmail: string;
+  fromName: string;
+  source?: 'environment' | 'database';
+}
+
+export interface EmailLog {
+  id: string;
+  to: string;
+  subject: string;
+  status: 'PENDING' | 'SENT' | 'FAILED';
+  error?: string;
+  createdAt: string;
+}
+
+export interface NotificationStats {
+  notifications: {
+    total: number;
+    unread: number;
+  };
+  emails: {
+    sent: number;
+    failed: number;
+  };
+  scheduled: {
+    pending: number;
+  };
+}
+
+export interface AdminUser extends User {
+  isActive?: boolean;
+}

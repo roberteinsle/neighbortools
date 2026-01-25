@@ -12,6 +12,7 @@ import { ToolsPage } from '@/pages/ToolsPage';
 import { LendingsPage } from '@/pages/LendingsPage';
 import { NeighborhoodsPage } from '@/pages/NeighborhoodsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
+import { AdminPage } from '@/pages/AdminPage';
 import { SUPPORTED_LANGS } from '@/hooks/useLocalizedNavigate';
 
 const queryClient = new QueryClient({
@@ -22,6 +23,21 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Admin-only route wrapper
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, isAuthenticated, isLoading } = useAuthStore();
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (!isAuthenticated || user?.role !== 'ADMIN') {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
 
 // Component that syncs URL language to i18n
 function LanguageSync({ children }: { children: React.ReactNode }) {
@@ -83,6 +99,14 @@ function LocalizedRoutes() {
               <ProtectedRoute>
                 <ProfilePage />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin"
+            element={
+              <AdminRoute>
+                <AdminPage />
+              </AdminRoute>
             }
           />
         </Route>
@@ -147,6 +171,14 @@ function AppContent() {
             <ProtectedRoute>
               <ProfilePage />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminPage />
+            </AdminRoute>
           }
         />
       </Route>

@@ -165,4 +165,31 @@ export const neighborhoodsApi = {
   getMyNeighborhoods: () => api.get('/neighborhoods/my'),
 };
 
+export const adminApi = {
+  // User management
+  getUsers: (params?: { page?: number; pageSize?: number }) =>
+    api.get('/users', { params }),
+  updateUser: (id: string, data: Partial<{ firstName: string; lastName: string; role: string; isActive: boolean }>) =>
+    api.put(`/users/${id}`, data),
+  deleteUser: (id: string) => api.delete(`/users/${id}`),
+
+  // SMTP configuration
+  getSmtpConfig: () => api.get('/notifications/admin/smtp'),
+  updateSmtpConfig: (data: {
+    host: string;
+    port: number;
+    secure: boolean;
+    user: string;
+    password: string;
+    fromEmail: string;
+    fromName: string;
+  }) => api.put('/notifications/admin/smtp', data),
+  testSmtpConfig: () => api.post('/notifications/admin/smtp/test'),
+
+  // Stats and logs
+  getStats: () => api.get('/notifications/admin/stats'),
+  getEmailLogs: (params?: { page?: number; pageSize?: number; status?: string }) =>
+    api.get('/notifications/admin/email-logs', { params }),
+};
+
 export default api;
