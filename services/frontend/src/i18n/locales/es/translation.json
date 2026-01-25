@@ -1,4 +1,18 @@
 {
+  "home": {
+    "tagline": "Comparte herramientas con tu vecindario. Ahorra dinero, conoce vecinos y construye comunidad.",
+    "welcome": "Bienvenido",
+    "manageInventory": "Gestiona tu inventario de herramientas",
+    "viewLendings": "Ver solicitudes de préstamo e historial",
+    "manageNeighborhoods": "Únete o gestiona vecindarios",
+    "browseTools": "Explora las herramientas disponibles en tus vecindarios",
+    "shareTools": "Comparte tus herramientas",
+    "shareToolsDesc": "Lista tus herramientas y ponlas a disposición de tus vecinos",
+    "joinNeighborhoods": "Únete a vecindarios",
+    "joinNeighborhoodsDesc": "Conecta con tu comunidad local y descubre recursos compartidos",
+    "borrowLend": "Prestar y pedir prestado",
+    "borrowLendDesc": "Solicita las herramientas que necesitas y ayuda a otros compartiendo las tuyas"
+  },
   "common": {
     "appName": "NeighborTools",
     "loading": "Cargando...",
@@ -169,6 +183,9 @@
     "networkError": "Error de red. Por favor, inténtalo de nuevo.",
     "unauthorized": "No tienes autorización para realizar esta acción",
     "notFound": "Recurso no encontrado",
-    "serverError": "Error del servidor. Por favor, inténtalo más tarde."
+    "serverError": "Error del servidor. Por favor, inténtalo más tarde.",
+    "emailAlreadyExists": "Ya existe un usuario con este correo electrónico",
+    "registrationFailed": "Error en el registro. Por favor, inténtalo de nuevo.",
+    "loginFailed": "Error de inicio de sesión. Por favor, inténtalo de nuevo."
   }
 }

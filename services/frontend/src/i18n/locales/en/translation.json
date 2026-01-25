@@ -1,4 +1,18 @@
 {
+  "home": {
+    "tagline": "Share tools with your neighborhood. Save money, meet neighbors, and build community.",
+    "welcome": "Welcome",
+    "manageInventory": "Manage your tool inventory",
+    "viewLendings": "View lending requests and history",
+    "manageNeighborhoods": "Join or manage neighborhoods",
+    "browseTools": "Browse available tools in your neighborhoods",
+    "shareTools": "Share Your Tools",
+    "shareToolsDesc": "List your tools and make them available to your neighbors",
+    "joinNeighborhoods": "Join Neighborhoods",
+    "joinNeighborhoodsDesc": "Connect with your local community and discover shared resources",
+    "borrowLend": "Borrow & Lend",
+    "borrowLendDesc": "Request tools you need and help others by sharing yours"
+  },
   "common": {
     "appName": "NeighborTools",
     "loading": "Loading...",
@@ -169,6 +183,9 @@
     "networkError": "Network error. Please try again.",
     "unauthorized": "You are not authorized to perform this action",
     "notFound": "Resource not found",
-    "serverError": "Server error. Please try again later."
+    "serverError": "Server error. Please try again later.",
+    "emailAlreadyExists": "A user with this email already exists",
+    "registrationFailed": "Registration failed. Please try again.",
+    "loginFailed": "Login failed. Please try again."
   }
 }

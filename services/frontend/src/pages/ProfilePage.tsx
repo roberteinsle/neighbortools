@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { User, Lock, Globe, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '@/context/auth-store';
+import { useLocalizedNavigate } from '@/hooks/useLocalizedNavigate';
 import { usersApi } from '@/lib/api';
 import { validatePassword, getPasswordErrorKey } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ const languages = [
 export function ProfilePage() {
   const { t, i18n } = useTranslation();
   const { user, updateUser } = useAuthStore();
+  const { changeLanguage } = useLocalizedNavigate();
   const [profileData, setProfileData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -100,7 +102,7 @@ export function ProfilePage() {
 
   const handleLanguageChange = (value: string) => {
     setSelectedLanguage(value);
-    i18n.changeLanguage(value);
+    changeLanguage(value);
   };
 
   return (

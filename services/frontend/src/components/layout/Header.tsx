@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Menu, Wrench, LogOut, User, Settings, Globe } from 'lucide-react';
+import { Menu, Wrench, LogOut, User, Globe } from 'lucide-react';
 import { useAuthStore } from '@/context/auth-store';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +15,7 @@ import {
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useLocalizedNavigate } from '@/hooks/useLocalizedNavigate';
 
 const languages = [
   { code: 'en', name: 'English' },
@@ -24,15 +25,12 @@ const languages = [
 ];
 
 export function Header() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { getLocalizedPath, changeLanguage, currentLang } = useLocalizedNavigate();
 
   const handleLogout = async () => {
     await logout();
-  };
-
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
   };
 
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -42,7 +40,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
-        <Link to="/" className="flex items-center space-x-2">
+        <Link to={getLocalizedPath('/')} className="flex items-center space-x-2">
           <Wrench className="h-6 w-6 text-primary" />
           <span className="font-bold text-xl">{t('common.appName')}</span>
         </Link>
@@ -50,13 +48,13 @@ export function Header() {
         <nav className="ml-auto flex items-center space-x-4">
           {isAuthenticated ? (
             <>
-              <Link to="/tools">
+              <Link to={getLocalizedPath('/tools')}>
                 <Button variant="ghost">{t('nav.tools')}</Button>
               </Link>
-              <Link to="/lendings">
+              <Link to={getLocalizedPath('/lendings')}>
                 <Button variant="ghost">{t('nav.lendings')}</Button>
               </Link>
-              <Link to="/neighborhoods">
+              <Link to={getLocalizedPath('/neighborhoods')}>
                 <Button variant="ghost">{t('nav.neighborhoods')}</Button>
               </Link>
 
@@ -83,15 +81,9 @@ export function Header() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/profile" className="cursor-pointer">
+                    <Link to={getLocalizedPath('/profile')} className="cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
                       {t('nav.profile')}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
-                      {t('nav.settings')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSub>
@@ -104,7 +96,7 @@ export function Header() {
                         <DropdownMenuItem
                           key={lang.code}
                           onClick={() => changeLanguage(lang.code)}
-                          className={i18n.language === lang.code ? 'bg-accent' : ''}
+                          className={currentLang === lang.code ? 'bg-accent' : ''}
                         >
                           {lang.name}
                         </DropdownMenuItem>
@@ -115,7 +107,7 @@ export function Header() {
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link to="/admin" className="cursor-pointer">
+                        <Link to={getLocalizedPath('/admin')} className="cursor-pointer">
                           <Menu className="mr-2 h-4 w-4" />
                           {t('nav.admin')}
                         </Link>
@@ -143,17 +135,17 @@ export function Header() {
                     <DropdownMenuItem
                       key={lang.code}
                       onClick={() => changeLanguage(lang.code)}
-                      className={i18n.language === lang.code ? 'bg-accent' : ''}
+                      className={currentLang === lang.code ? 'bg-accent' : ''}
                     >
                       {lang.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Link to="/login">
+              <Link to={getLocalizedPath('/login')}>
                 <Button variant="ghost">{t('auth.login')}</Button>
               </Link>
-              <Link to="/register">
+              <Link to={getLocalizedPath('/register')}>
                 <Button>{t('auth.register')}</Button>
               </Link>
             </>

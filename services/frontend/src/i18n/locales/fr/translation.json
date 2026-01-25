@@ -1,4 +1,18 @@
 {
+  "home": {
+    "tagline": "Partagez des outils avec votre quartier. Économisez de l'argent, rencontrez vos voisins et créez une communauté.",
+    "welcome": "Bienvenue",
+    "manageInventory": "Gérez votre inventaire d'outils",
+    "viewLendings": "Voir les demandes de prêt et l'historique",
+    "manageNeighborhoods": "Rejoindre ou gérer des quartiers",
+    "browseTools": "Parcourir les outils disponibles dans vos quartiers",
+    "shareTools": "Partagez vos outils",
+    "shareToolsDesc": "Listez vos outils et rendez-les disponibles à vos voisins",
+    "joinNeighborhoods": "Rejoignez des quartiers",
+    "joinNeighborhoodsDesc": "Connectez-vous avec votre communauté locale et découvrez les ressources partagées",
+    "borrowLend": "Emprunter et prêter",
+    "borrowLendDesc": "Demandez les outils dont vous avez besoin et aidez les autres en partageant les vôtres"
+  },
   "common": {
     "appName": "NeighborTools",
     "loading": "Chargement...",
@@ -169,6 +183,9 @@
     "networkError": "Erreur réseau. Veuillez réessayer.",
     "unauthorized": "Vous n'êtes pas autorisé à effectuer cette action",
     "notFound": "Ressource non trouvée",
-    "serverError": "Erreur serveur. Veuillez réessayer plus tard."
+    "serverError": "Erreur serveur. Veuillez réessayer plus tard.",
+    "emailAlreadyExists": "Un utilisateur avec cet e-mail existe déjà",
+    "registrationFailed": "Échec de l'inscription. Veuillez réessayer.",
+    "loginFailed": "Échec de la connexion. Veuillez réessayer."
   }
 }

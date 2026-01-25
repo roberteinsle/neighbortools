@@ -5,11 +5,23 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '@/context/auth-store';
+import { useLocalizedNavigate } from '@/hooks/useLocalizedNavigate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wrench } from 'lucide-react';
+
+// Map backend error messages to translation keys
+function getLoginErrorTranslationKey(error: string): string {
+  if (error.includes('Invalid email or password') || error.includes('Invalid credentials')) {
+    return 'auth.invalidCredentials';
+  }
+  if (error.includes('deactivated')) {
+    return 'errors.unauthorized';
+  }
+  return 'errors.loginFailed';
+}
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -22,6 +34,7 @@ export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+  const { getLocalizedPath } = useLocalizedNavigate();
   const { login, error, clearError } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -64,7 +77,7 @@ export function LoginPage() {
           <CardContent className="space-y-4">
             {error && (
               <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
-                {error}
+                {t(getLoginErrorTranslationKey(error))}
               </div>
             )}
             <div className="space-y-2">
@@ -97,7 +110,7 @@ export function LoginPage() {
             </Button>
             <p className="text-sm text-muted-foreground text-center">
               {t('auth.noAccount')}{' '}
-              <Link to="/register" className="text-primary hover:underline">
+              <Link to={getLocalizedPath('/register')} className="text-primary hover:underline">
                 {t('auth.register')}
               </Link>
             </p>

@@ -5,12 +5,24 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '@/context/auth-store';
+import { useLocalizedNavigate } from '@/hooks/useLocalizedNavigate';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wrench, CheckCircle, AlertCircle } from 'lucide-react';
 import { validatePassword, getPasswordErrorKey } from '@/lib/utils';
+
+// Map backend error messages to translation keys
+function getErrorTranslationKey(error: string): string {
+  if (error.includes('email already exists') || error.includes('User with this email')) {
+    return 'errors.emailAlreadyExists';
+  }
+  if (error.includes('Invalid email')) {
+    return 'errors.invalidEmail';
+  }
+  return 'errors.registrationFailed';
+}
 
 const registerSchema = z.object({
   firstName: z.string().min(1),
@@ -28,6 +40,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 export function RegisterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { getLocalizedPath } = useLocalizedNavigate();
   const { register: registerUser, error, clearError } = useAuthStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -60,7 +73,7 @@ export function RegisterPage() {
         firstName: data.firstName,
         lastName: data.lastName,
       });
-      navigate('/', { replace: true });
+      navigate(getLocalizedPath('/'), { replace: true });
     } catch {
       // Error is handled by the store
     } finally {
@@ -84,7 +97,7 @@ export function RegisterPage() {
           <CardContent className="space-y-4">
             {error && (
               <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
-                {error}
+                {t(getErrorTranslationKey(error))}
               </div>
             )}
             <div className="grid grid-cols-2 gap-4">
@@ -166,7 +179,7 @@ export function RegisterPage() {
             </Button>
             <p className="text-sm text-muted-foreground text-center">
               {t('auth.hasAccount')}{' '}
-              <Link to="/login" className="text-primary hover:underline">
+              <Link to={getLocalizedPath('/login')} className="text-primary hover:underline">
                 {t('auth.login')}
               </Link>
             </p>

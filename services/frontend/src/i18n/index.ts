@@ -14,8 +14,27 @@ const resources = {
   fr: { translation: fr },
 };
 
+// Custom path detector for URL-based language
+const pathDetector = {
+  name: 'path',
+  lookup() {
+    const pathname = window.location.pathname;
+    const segments = pathname.split('/').filter(Boolean);
+    const firstSegment = segments[0];
+
+    if (firstSegment && ['de', 'es', 'fr'].includes(firstSegment)) {
+      return firstSegment;
+    }
+    return 'en';
+  },
+};
+
+// Create custom language detector with path detection
+const languageDetector = new LanguageDetector();
+languageDetector.addDetector(pathDetector);
+
 i18n
-  .use(LanguageDetector)
+  .use(languageDetector)
   .use(initReactI18next)
   .init({
     resources,
@@ -25,7 +44,7 @@ i18n
       escapeValue: false,
     },
     detection: {
-      order: ['localStorage', 'navigator', 'htmlTag'],
+      order: ['path', 'localStorage', 'navigator', 'htmlTag'],
       caches: ['localStorage'],
     },
   });

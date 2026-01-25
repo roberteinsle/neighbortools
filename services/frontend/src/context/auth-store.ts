@@ -40,7 +40,8 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (error: unknown) {
-          const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login failed';
+          const errData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+          const message = errData?.error || errData?.message || 'Login failed';
           set({ error: message, isLoading: false });
           throw error;
         }
@@ -61,7 +62,8 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (error: unknown) {
-          const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Registration failed';
+          const errData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
+          const message = errData?.error || errData?.message || 'Registration failed';
           set({ error: message, isLoading: false });
           throw error;
         }

@@ -1,4 +1,18 @@
 {
+  "home": {
+    "tagline": "Teile Werkzeuge mit deiner Nachbarschaft. Spare Geld, lerne Nachbarn kennen und stärke die Gemeinschaft.",
+    "welcome": "Willkommen",
+    "manageInventory": "Verwalte dein Werkzeuginventar",
+    "viewLendings": "Ausleihanfragen und Verlauf anzeigen",
+    "manageNeighborhoods": "Nachbarschaften beitreten oder verwalten",
+    "browseTools": "Verfügbare Werkzeuge in deinen Nachbarschaften durchsuchen",
+    "shareTools": "Teile deine Werkzeuge",
+    "shareToolsDesc": "Liste deine Werkzeuge und stelle sie deinen Nachbarn zur Verfügung",
+    "joinNeighborhoods": "Tritt Nachbarschaften bei",
+    "joinNeighborhoodsDesc": "Verbinde dich mit deiner lokalen Gemeinschaft und entdecke geteilte Ressourcen",
+    "borrowLend": "Ausleihen & Verleihen",
+    "borrowLendDesc": "Frage Werkzeuge an, die du brauchst, und hilf anderen, indem du deine teilst"
+  },
   "common": {
     "appName": "NeighborTools",
     "loading": "Laden...",
@@ -169,6 +183,9 @@
     "networkError": "Netzwerkfehler. Bitte erneut versuchen.",
     "unauthorized": "Sie sind nicht berechtigt, diese Aktion auszuführen",
     "notFound": "Ressource nicht gefunden",
-    "serverError": "Serverfehler. Bitte später erneut versuchen."
+    "serverError": "Serverfehler. Bitte später erneut versuchen.",
+    "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
+    "registrationFailed": "Registrierung fehlgeschlagen. Bitte erneut versuchen.",
+    "loginFailed": "Anmeldung fehlgeschlagen. Bitte erneut versuchen."
   }
 }
