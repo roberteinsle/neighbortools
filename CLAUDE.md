@@ -163,6 +163,14 @@ scripts/
 - Data modifications are allowed
 - Rebuilding application containers is safe, but leave the database container untouched
 
+### Git Workflow
+
+**IMPORTANT: Do NOT automatically push to GitHub.**
+
+- `git add` and `git commit` are allowed
+- `git push` should ONLY be done when explicitly requested by the user
+- Always wait for user confirmation before pushing changes to the remote repository
+
 ## Tech Stack
 
 - **Backend**: Node.js 18+, TypeScript, Express.js, Prisma ORM, PostgreSQL 15
