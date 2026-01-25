@@ -3,7 +3,7 @@
 > **A Microservice-based Tool Sharing Platform for Neighborhood Communities**
 
 [![GitHub](https://img.shields.io/badge/GitHub-neighbortools-blue)](https://github.com/roberteinsle/neighbortools)
-[![Railway](https://img.shields.io/badge/Deploy-Railway-purple)](https://railway.app)
+[![Hetzner](https://img.shields.io/badge/Deploy-Hetzner-red)](https://www.hetzner.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18-blue)](https://reactjs.org/)
@@ -62,7 +62,8 @@ The application consists of **7 independent microservices**:
 - Docker & Docker Compose
 - PNPM Workspaces (Monorepo)
 - GitHub Codespaces (DEV)
-- Railway (PROD)
+- Hetzner VM (PROD)
+- Traefik (Reverse Proxy + SSL)
 
 ---
 
@@ -161,19 +162,18 @@ pnpm run dev
 - Direct Git integration
 - Isolated environment
 
-### PROD: Railway
+### PROD: Hetzner VM
 
-**Production environment** is hosted on Railway:
-- Automatic deployment on push to `main` branch
-- Separate containers for each microservice
-- Managed PostgreSQL database
-- Persistent volumes for file storage
-- Automatic HTTPS configuration
-- Private networking between services
+**Production environment** runs on a Hetzner VM:
+- Docker Compose with production configuration
+- Traefik reverse proxy with automatic SSL (Let's Encrypt)
+- PostgreSQL database with persistent volumes
+- Persistent volumes for file uploads
+- Internal Docker network for service communication
 
 **Deployment Workflow:**
 ```
-GitHub Codespaces (DEV) → Git Push → Railway (PROD)
+GitHub Codespaces (DEV) → Git Push → SSH to VM → git pull → docker compose up
 ```
 
 ---
@@ -198,7 +198,7 @@ GitHub Codespaces (DEV) → Git Push → Railway (PROD)
 │   ├── migrate-all.sh         # Run all migrations
 │   └── seed-database.ts       # Seed test data
 ├── docker-compose.yml         # Local development
-├── railway.json               # Railway deployment config
+├── docker-compose.prod.yml    # Production deployment config
 ├── package.json               # Root package (PNPM workspace)
 ├── pnpm-workspace.yaml        # PNPM workspace definition
 ├── .gitignore                 # Git ignore (includes credentials)
@@ -254,7 +254,7 @@ docker-compose down
 
 6. After PR approval, merge to `main`
 
-7. **Railway automatically deploys** the changes to production
+7. Deploy to production via `git pull && docker compose up` on Hetzner VM
 
 ---
 
@@ -263,7 +263,7 @@ docker-compose down
 ### Base URLs
 
 - **DEV**: `http://localhost:3000/api`
-- **PROD**: `https://api-gateway.railway.app/api`
+- **PROD**: `https://neighbortools.net/api`
 
 ### Key Endpoints
 
@@ -361,30 +361,71 @@ For detailed instructions, see [CLAUDE.md](CLAUDE.md#internationalisierung-i18n)
 
 ## 🚢 Deployment
 
-### Automatic Deployment (Railway)
+### Production Deployment (Hetzner VM)
 
-1. Make changes in a feature branch
-2. Create Pull Request
-3. Review and merge to `main`
-4. **Railway automatically deploys** to production
+#### Prerequisites
 
-### Manual Deployment (Railway CLI)
+1. Hetzner VM with Docker installed
+2. Domain (neighbortools.net) pointing to VM IP
+3. SSH access to the server
+
+#### Initial Setup
 
 ```bash
-# Install Railway CLI
-npm i -g @railway/cli
+# SSH to your Hetzner VM
+ssh user@your-server-ip
 
-# Login
-railway login
+# Clone repository
+git clone https://github.com/roberteinsle/neighbortools.git
+cd neighbortools
 
-# Link project
-railway link
+# Configure environment
+cp .env.prod.example .env
+nano .env  # Edit with your production values
 
-# View logs
-railway logs
+# Generate secure secrets
+openssl rand -base64 64  # For JWT_SECRET
+# For TRAEFIK_DASHBOARD_AUTH:
+echo $(htpasswd -nb admin yourpassword) | sed -e s/\\$/\\$\\$/g
 
-# Rollback if needed
-railway rollback
+# Start all services
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Initialize databases (first time only)
+docker exec neighbortools-user-service npx prisma db push
+docker exec neighbortools-tool-service npx prisma db push
+docker exec neighbortools-lending-service npx prisma db push
+docker exec neighbortools-neighborhood-service npx prisma db push
+docker exec neighbortools-notification-service npx prisma db push
+```
+
+#### Updating Production
+
+```bash
+# SSH to server and update
+ssh user@your-server-ip
+cd neighbortools
+git pull
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+#### Useful Commands
+
+```bash
+# View all logs
+docker compose -f docker-compose.prod.yml logs -f
+
+# View specific service
+docker compose -f docker-compose.prod.yml logs -f frontend
+
+# Restart service
+docker compose -f docker-compose.prod.yml restart frontend
+
+# Check status
+docker compose -f docker-compose.prod.yml ps
+
+# Stop everything
+docker compose -f docker-compose.prod.yml down
 ```
 
 ---
@@ -406,9 +447,9 @@ railway rollback
 - Local `.env` files (not committed)
 - Codespaces Secrets for sensitive data
 
-**PROD (Railway):**
-- Railway Environment Variables
-- Encrypted secrets in Railway Dashboard
+**PROD (Hetzner VM):**
+- `.env` file on server (not in git)
+- Secure SSH access only
 
 ---
 

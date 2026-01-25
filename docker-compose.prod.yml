@@ -1,0 +1,218 @@
+version: '3.8'
+
+# Production Docker Compose for Hetzner VM
+# Uses Traefik as reverse proxy with automatic Let's Encrypt SSL
+
+services:
+  # ===========================================
+  # Reverse Proxy (Traefik)
+  # ===========================================
+  traefik:
+    image: traefik:v2.11
+    container_name: neighbortools-traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+    networks:
+      - neighbortools-network
+    labels:
+      - "traefik.enable=true"
+      # Dashboard (optional, remove in production if not needed)
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.middlewares=traefik-auth"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
+
+  # ===========================================
+  # Database
+  # ===========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: neighbortools-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - neighbortools-network
+
+  # ===========================================
+  # Backend Services
+  # ===========================================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: neighbortools-gateway
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET}
+      - USER_SERVICE_URL=http://user-service:3001
+      - TOOL_SERVICE_URL=http://tool-service:3002
+      - LENDING_SERVICE_URL=http://lending-service:3003
+      - NEIGHBORHOOD_SERVICE_URL=http://neighborhood-service:3004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3005
+    depends_on:
+      - user-service
+      - neighborhood-service
+      - tool-service
+      - lending-service
+      - notification-service
+    networks:
+      - neighbortools-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    container_name: neighbortools-user-service
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/user_db
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - neighbortools-network
+
+  tool-service:
+    build:
+      context: .
+      dockerfile: services/tool-service/Dockerfile
+    container_name: neighbortools-tool-service
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/tool_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - tool_uploads:/app/services/tool-service/uploads
+    networks:
+      - neighbortools-network
+
+  lending-service:
+    build:
+      context: .
+      dockerfile: services/lending-service/Dockerfile
+    container_name: neighbortools-lending-service
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/lending_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - neighbortools-network
+
+  neighborhood-service:
+    build:
+      context: .
+      dockerfile: services/neighborhood-service/Dockerfile
+    container_name: neighbortools-neighborhood-service
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/neighborhood_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - neighbortools-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    container_name: neighbortools-notification-service
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3005
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/notification_db
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
+      - APP_URL=https://${DOMAIN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - neighbortools-network
+
+  # ===========================================
+  # Frontend
+  # ===========================================
+  frontend:
+    build:
+      context: .
+      dockerfile: services/frontend/Dockerfile
+    container_name: neighbortools-frontend
+    restart: unless-stopped
+    environment:
+      - PORT=80
+      - API_GATEWAY_HOST=api-gateway
+      - API_GATEWAY_PORT=3000
+    depends_on:
+      - api-gateway
+    networks:
+      - neighbortools-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`${DOMAIN}`) || Host(`www.${DOMAIN}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      # Redirect www to non-www
+      - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https://www\\.(.+)"
+      - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://$${1}"
+      - "traefik.http.middlewares.www-redirect.redirectregex.permanent=true"
+      - "traefik.http.routers.frontend.middlewares=www-redirect"
+
+networks:
+  neighbortools-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  tool_uploads:
+  traefik_letsencrypt:

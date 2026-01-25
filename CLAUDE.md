@@ -52,7 +52,8 @@ NeighborTools.net is a microservice-based tool sharing platform for neighborhood
 
 ### Phase 8: Integration & Deployment
 - End-to-end testing
-- Railway deployment configuration
+- Hetzner VM deployment with Docker Compose
+- Traefik reverse proxy with automatic SSL (Let's Encrypt)
 - CI/CD pipeline setup
 - Production environment variables
 
@@ -146,7 +147,7 @@ scripts/
 
 - **Database per service**: Each microservice has its own Prisma schema and database
 - **JWT authentication**: Implemented in api-gateway, tokens validated on each request (synchronous, no external calls)
-- **Inter-service communication**: Services communicate via internal HTTP (Railway private networking in prod)
+- **Inter-service communication**: Services communicate via internal Docker network (neighbortools-network)
 - **i18n**: Frontend uses i18next; notification-service has language-specific email templates in `src/templates/[lang]/`
 - **Profile updates use POST**: Frontend uses POST instead of PATCH for `/api/users/profile` due to GitHub Codespaces proxy issues with PATCH request bodies
 - **No body parsing in gateway**: API Gateway does not parse request bodies; raw body is forwarded directly to microservices
@@ -161,7 +162,56 @@ scripts/
 ## Environments
 
 - **DEV**: GitHub Codespaces with Docker Compose
-- **PROD**: Railway (auto-deploys on push to `main`)
+- **PROD**: Hetzner VM with Docker Compose + Traefik (manual deploy via git pull)
+
+## Production Deployment (Hetzner VM)
+
+### Initial Setup
+
+```bash
+# On Hetzner VM, clone repo and configure
+git clone https://github.com/roberteinsle/neighbortools.git
+cd neighbortools
+cp .env.prod.example .env
+# Edit .env with production values
+
+# Start all services
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Initialize databases (first time only)
+docker exec neighbortools-user-service npx prisma db push
+docker exec neighbortools-tool-service npx prisma db push
+docker exec neighbortools-lending-service npx prisma db push
+docker exec neighbortools-neighborhood-service npx prisma db push
+docker exec neighbortools-notification-service npx prisma db push
+```
+
+### Updating Production
+
+```bash
+cd /path/to/neighbortools
+git pull
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+### Useful Commands
+
+```bash
+# View logs
+docker compose -f docker-compose.prod.yml logs -f
+
+# View specific service logs
+docker compose -f docker-compose.prod.yml logs -f frontend
+
+# Restart a service
+docker compose -f docker-compose.prod.yml restart frontend
+
+# Stop all services
+docker compose -f docker-compose.prod.yml down
+
+# Check status
+docker compose -f docker-compose.prod.yml ps
+```
 
 ## Supported Languages
 
