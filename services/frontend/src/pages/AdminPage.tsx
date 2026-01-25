@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -10,13 +10,11 @@ import {
   AlertCircle,
   RefreshCw,
   Send,
-  Eye,
-  EyeOff,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { adminApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AdminUser, SmtpConfig, NotificationStats, EmailLog } from '@/types';
@@ -29,17 +27,9 @@ export function AdminPage() {
   const [userPage, setUserPage] = useState(1);
 
   // SMTP Tab State
-  const [showPassword, setShowPassword] = useState(false);
-  const [smtpForm, setSmtpForm] = useState({
-    host: '',
-    port: 587,
-    secure: false,
-    user: '',
-    password: '',
-    fromEmail: '',
-    fromName: 'NeighborTools',
-  });
+  const [emailLogPage, setEmailLogPage] = useState(1);
   const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const emailLogsPerPage = 10;
 
   // Queries
   const usersQuery = useQuery({
@@ -58,21 +48,6 @@ export function AdminPage() {
     },
   });
 
-  // Sync SMTP form when data is loaded
-  useEffect(() => {
-    if (smtpQuery.data) {
-      setSmtpForm({
-        host: smtpQuery.data.host || '',
-        port: smtpQuery.data.port || 587,
-        secure: smtpQuery.data.secure || false,
-        user: smtpQuery.data.user || '',
-        password: '',
-        fromEmail: smtpQuery.data.fromEmail || '',
-        fromName: smtpQuery.data.fromName || 'NeighborTools',
-      });
-    }
-  }, [smtpQuery.data]);
-
   const statsQuery = useQuery({
     queryKey: ['admin', 'stats'],
     queryFn: async () => {
@@ -82,10 +57,10 @@ export function AdminPage() {
   });
 
   const emailLogsQuery = useQuery({
-    queryKey: ['admin', 'email-logs'],
+    queryKey: ['admin', 'email-logs', emailLogPage],
     queryFn: async () => {
-      const response = await adminApi.getEmailLogs({ pageSize: 20 });
-      return response.data.data as { data: EmailLog[]; pagination: { total: number } };
+      const response = await adminApi.getEmailLogs({ page: emailLogPage, pageSize: emailLogsPerPage });
+      return response.data.data as { data: EmailLog[]; pagination: { total: number; totalPages: number } };
     },
   });
 
@@ -95,17 +70,6 @@ export function AdminPage() {
       adminApi.updateUser(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-    },
-  });
-
-  const updateSmtpMutation = useMutation({
-    mutationFn: (data: typeof smtpForm) => adminApi.updateSmtpConfig(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'smtp'] });
-      setSmtpTestResult({ success: true, message: t('admin.smtpSaved') });
-    },
-    onError: () => {
-      setSmtpTestResult({ success: false, message: t('admin.smtpSaveError') });
     },
   });
 
@@ -124,12 +88,6 @@ export function AdminPage() {
       id: user.id,
       data: { isActive: !user.isActive },
     });
-  };
-
-  const handleSmtpSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSmtpTestResult(null);
-    updateSmtpMutation.mutate(smtpForm);
   };
 
   return (
@@ -257,98 +215,37 @@ export function AdminPage() {
 
         {/* SMTP Tab */}
         <TabsContent value="smtp">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('admin.smtpConfig')}</CardTitle>
-              <CardDescription>
-                {smtpQuery.data?.source === 'environment'
-                  ? t('admin.smtpFromEnv')
-                  : t('admin.smtpFromDb')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSmtpSubmit} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp-host">{t('admin.smtpHost')}</Label>
-                    <Input
-                      id="smtp-host"
-                      value={smtpForm.host}
-                      onChange={(e) => setSmtpForm({ ...smtpForm, host: e.target.value })}
-                      placeholder="smtp.example.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp-port">{t('admin.smtpPort')}</Label>
-                    <Input
-                      id="smtp-port"
-                      type="number"
-                      value={smtpForm.port}
-                      onChange={(e) => setSmtpForm({ ...smtpForm, port: parseInt(e.target.value) })}
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp-user">{t('admin.smtpUser')}</Label>
-                    <Input
-                      id="smtp-user"
-                      value={smtpForm.user}
-                      onChange={(e) => setSmtpForm({ ...smtpForm, user: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp-password">{t('admin.smtpPassword')}</Label>
-                    <div className="relative">
-                      <Input
-                        id="smtp-password"
-                        type={showPassword ? 'text' : 'password'}
-                        value={smtpForm.password}
-                        onChange={(e) => setSmtpForm({ ...smtpForm, password: e.target.value })}
-                        placeholder={smtpQuery.data ? '••••••••' : ''}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('admin.smtpConfig')}</CardTitle>
+                <CardDescription>{t('admin.smtpFromEnv')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {smtpQuery.isLoading ? (
+                  <p className="text-muted-foreground">{t('common.loading')}</p>
+                ) : smtpQuery.data ? (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">{t('admin.smtpHost')}</p>
+                      <p className="font-mono">{smtpQuery.data.host || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">{t('admin.smtpPort')}</p>
+                      <p className="font-mono">{smtpQuery.data.port || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">{t('admin.smtpUser')}</p>
+                      <p className="font-mono">{smtpQuery.data.user || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">{t('admin.smtpFromEmail')}</p>
+                      <p className="font-mono">{smtpQuery.data.fromEmail || '-'}</p>
                     </div>
                   </div>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp-from-email">{t('admin.smtpFromEmail')}</Label>
-                    <Input
-                      id="smtp-from-email"
-                      type="email"
-                      value={smtpForm.fromEmail}
-                      onChange={(e) => setSmtpForm({ ...smtpForm, fromEmail: e.target.value })}
-                      placeholder="noreply@example.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp-from-name">{t('admin.smtpFromName')}</Label>
-                    <Input
-                      id="smtp-from-name"
-                      value={smtpForm.fromName}
-                      onChange={(e) => setSmtpForm({ ...smtpForm, fromName: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="smtp-secure"
-                    checked={smtpForm.secure}
-                    onChange={(e) => setSmtpForm({ ...smtpForm, secure: e.target.checked })}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <Label htmlFor="smtp-secure">{t('admin.smtpSecure')}</Label>
-                </div>
+                ) : (
+                  <p className="text-muted-foreground">{t('admin.smtpNotConfigured')}</p>
+                )}
 
                 {smtpTestResult && (
                   <div
@@ -367,73 +264,24 @@ export function AdminPage() {
                   </div>
                 )}
 
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={updateSmtpMutation.isPending}>
-                    {updateSmtpMutation.isPending ? t('common.loading') : t('common.save')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => testSmtpMutation.mutate()}
-                    disabled={testSmtpMutation.isPending}
-                  >
-                    <Send className="mr-2 h-4 w-4" />
-                    {testSmtpMutation.isPending ? t('common.loading') : t('admin.testConnection')}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Stats Tab */}
-        <TabsContent value="stats">
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{t('admin.totalNotifications')}</CardTitle>
-                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {statsQuery.data?.notifications.total ?? '-'}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {statsQuery.data?.notifications.unread ?? 0} {t('admin.unread')}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{t('admin.emailsSent')}</CardTitle>
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {statsQuery.data?.emails.sent ?? '-'}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {statsQuery.data?.emails.failed ?? 0} {t('admin.failed')}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{t('admin.scheduledPending')}</CardTitle>
-                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {statsQuery.data?.scheduled.pending ?? '-'}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSmtpTestResult(null);
+                    testSmtpMutation.mutate();
+                  }}
+                  disabled={testSmtpMutation.isPending || !smtpQuery.data?.host}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {testSmtpMutation.isPending ? t('common.loading') : t('admin.sendTestEmail')}
+                </Button>
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>
                 <CardTitle>{t('admin.recentEmails')}</CardTitle>
+                <CardDescription>{t('admin.recentEmailsDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {emailLogsQuery.isLoading ? (
@@ -441,45 +289,115 @@ export function AdminPage() {
                 ) : emailLogsQuery.data?.data.length === 0 ? (
                   <p className="text-muted-foreground">{t('admin.noEmails')}</p>
                 ) : (
-                  <div className="rounded-md border">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b bg-muted/50">
-                          <th className="p-3 text-left font-medium">{t('admin.recipient')}</th>
-                          <th className="p-3 text-left font-medium">{t('admin.subject')}</th>
-                          <th className="p-3 text-left font-medium">{t('admin.status')}</th>
-                          <th className="p-3 text-left font-medium">{t('admin.date')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {emailLogsQuery.data?.data.map((log) => (
-                          <tr key={log.id} className="border-b">
-                            <td className="p-3">{log.to}</td>
-                            <td className="p-3">{log.subject}</td>
-                            <td className="p-3">
-                              <span
-                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                  log.status === 'SENT'
-                                    ? 'bg-green-100 text-green-800'
-                                    : log.status === 'FAILED'
-                                    ? 'bg-red-100 text-red-800'
-                                    : 'bg-yellow-100 text-yellow-800'
-                                }`}
-                              >
-                                {log.status === 'SENT' && <CheckCircle className="h-3 w-3" />}
-                                {log.status === 'FAILED' && <XCircle className="h-3 w-3" />}
-                                {log.status}
-                              </span>
-                            </td>
-                            <td className="p-3 text-muted-foreground">
-                              {new Date(log.createdAt).toLocaleString()}
-                            </td>
+                  <div className="space-y-4">
+                    <div className="rounded-md border">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="p-3 text-left font-medium">{t('admin.recipient')}</th>
+                            <th className="p-3 text-left font-medium">{t('admin.subject')}</th>
+                            <th className="p-3 text-left font-medium">{t('admin.status')}</th>
+                            <th className="p-3 text-left font-medium">{t('admin.date')}</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {emailLogsQuery.data?.data.map((log) => (
+                            <tr key={log.id} className="border-b">
+                              <td className="p-3">{log.to}</td>
+                              <td className="p-3">{log.subject}</td>
+                              <td className="p-3">
+                                <span
+                                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                    log.status === 'SENT'
+                                      ? 'bg-green-100 text-green-800'
+                                      : log.status === 'FAILED'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-yellow-100 text-yellow-800'
+                                  }`}
+                                >
+                                  {log.status === 'SENT' && <CheckCircle className="h-3 w-3" />}
+                                  {log.status === 'FAILED' && <XCircle className="h-3 w-3" />}
+                                  {log.status}
+                                </span>
+                              </td>
+                              <td className="p-3 text-muted-foreground">
+                                {new Date(log.createdAt).toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {emailLogsQuery.data?.pagination && emailLogsQuery.data.pagination.totalPages > 1 && (
+                      <div className="flex justify-center items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEmailLogPage((p) => Math.max(1, p - 1))}
+                          disabled={emailLogPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm">
+                          {emailLogPage} / {emailLogsQuery.data.pagination.totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEmailLogPage((p) => p + 1)}
+                          disabled={emailLogPage >= emailLogsQuery.data.pagination.totalPages}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Stats Tab */}
+        <TabsContent value="stats">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('admin.totalNotifications')}</CardTitle>
+                <RefreshCw className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {statsQuery.data?.notifications.total ?? '-'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {statsQuery.data?.notifications.unread ?? 0} {t('admin.unread')}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('admin.emailsSent')}</CardTitle>
+                <Mail className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {statsQuery.data?.emails.sent ?? '-'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {statsQuery.data?.emails.failed ?? 0} {t('admin.failed')}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('admin.scheduledPending')}</CardTitle>
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {statsQuery.data?.scheduled.pending ?? '-'}
+                </div>
               </CardContent>
             </Card>
           </div>
