@@ -152,6 +152,17 @@ scripts/
 - **Profile updates use POST**: Frontend uses POST instead of PATCH for `/api/users/profile` due to GitHub Codespaces proxy issues with PATCH request bodies
 - **No body parsing in gateway**: API Gateway does not parse request bodies; raw body is forwarded directly to microservices
 
+### Critical Infrastructure - DO NOT DELETE
+
+**IMPORTANT: The database container `neighbortools-db` must NEVER be deleted or recreated.**
+
+- The PostgreSQL container holds all production data
+- NEVER run `docker compose down -v` (the `-v` flag deletes volumes including database data)
+- NEVER delete the Docker volume `neighbortools_postgres_data`
+- Schema changes via Prisma migrations are allowed
+- Data modifications are allowed
+- Rebuilding application containers is safe, but leave the database container untouched
+
 ## Tech Stack
 
 - **Backend**: Node.js 18+, TypeScript, Express.js, Prisma ORM, PostgreSQL 15
