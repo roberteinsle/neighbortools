@@ -73,6 +73,18 @@ export function setupProxyRoutes(app: Express): void {
     createProxyMiddleware(createProxy(SERVICE_URLS.neighborhood, { '^/api/neighborhoods': '/neighborhoods' }))
   );
 
+  // Member routes -> Neighborhood Service
+  app.use(
+    '/api/members',
+    createProxyMiddleware(createProxy(SERVICE_URLS.neighborhood, { '^/api/members': '/members' }))
+  );
+
+  // Notification admin routes (must be before /api/notifications)
+  app.use(
+    '/api/notifications/admin',
+    createProxyMiddleware(createProxy(SERVICE_URLS.notification, { '^/api/notifications/admin': '/admin' }))
+  );
+
   // Notification routes -> Notification Service
   app.use(
     '/api/notifications',

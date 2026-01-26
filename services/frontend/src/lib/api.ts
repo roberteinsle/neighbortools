@@ -156,13 +156,23 @@ export const neighborhoodsApi = {
   getById: (id: string) => api.get(`/neighborhoods/${id}`),
   create: (data: { name: string; description: string }) => api.post('/neighborhoods', data),
   update: (id: string, data: { name?: string; description?: string }) =>
-    api.patch(`/neighborhoods/${id}`, data),
+    api.put(`/neighborhoods/${id}`, data),
   delete: (id: string) => api.delete(`/neighborhoods/${id}`),
   join: (inviteCode: string) => api.post('/neighborhoods/join', { inviteCode }),
   leave: (id: string) => api.post(`/neighborhoods/${id}/leave`),
   getMembers: (id: string) => api.get(`/neighborhoods/${id}/members`),
-  generateInvite: (id: string) => api.post(`/neighborhoods/${id}/invite`),
-  getMyNeighborhoods: () => api.get('/neighborhoods/my'),
+  regenerateInviteCode: (id: string) => api.post(`/neighborhoods/${id}/regenerate-code`),
+  getMyNeighborhoods: () => api.get('/neighborhoods'),
+};
+
+export const membersApi = {
+  updateRole: (memberId: string, role: 'MEMBER' | 'ADMIN') =>
+    api.put(`/members/${memberId}/role`, { role }),
+  remove: (memberId: string) => api.delete(`/members/${memberId}`),
+  sendInvite: (neighborhoodId: string, email: string) =>
+    api.post('/members/invite', { neighborhoodId, email }),
+  listInvites: (neighborhoodId: string) => api.get(`/members/invites/${neighborhoodId}`),
+  revokeInvite: (inviteId: string) => api.delete(`/members/invites/${inviteId}`),
 };
 
 export const adminApi = {

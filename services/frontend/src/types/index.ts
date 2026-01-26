@@ -110,6 +110,7 @@ export interface Neighborhood {
   id: string;
   name: string;
   description: string;
+  inviteCode?: string;
   createdAt: string;
   updatedAt: string;
   _count?: {

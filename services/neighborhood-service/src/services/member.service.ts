@@ -4,6 +4,10 @@ import { calculateOffset } from '@neighbortools/shared-utils';
 
 const prisma = new PrismaClient();
 
+const NOTIFICATION_SERVICE_URL = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3005';
+const USER_SERVICE_URL = process.env.USER_SERVICE_URL || 'http://user-service:3001';
+const APP_URL = process.env.APP_URL || 'http://localhost:5173';
+
 interface InviteDto {
   neighborhoodId: string;
   email: string;
@@ -101,6 +105,15 @@ export class MemberService {
       throw new Error('An invite has already been sent to this email');
     }
 
+    // Get neighborhood details
+    const neighborhood = await prisma.neighborhood.findUnique({
+      where: { id: dto.neighborhoodId },
+    });
+
+    if (!neighborhood) {
+      throw new Error('Neighborhood not found');
+    }
+
     // Create invite with 7 day expiry
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
@@ -114,7 +127,50 @@ export class MemberService {
       },
     });
 
-    // TODO: Send email notification via notification service
+    // Send email notification via notification service
+    try {
+      // Get inviter's name from user service
+      let inviterName = 'A neighbor';
+      try {
+        const userResponse = await fetch(`${USER_SERVICE_URL}/users/${invitedBy}`, {
+          headers: {
+            'x-user-id': invitedBy,
+            'x-user-role': 'SYSTEM',
+          },
+        });
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.success && userData.data) {
+            inviterName = `${userData.data.firstName} ${userData.data.lastName}`.trim() || 'A neighbor';
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch inviter info:', err);
+      }
+
+      // Send email via notification service
+      await fetch(`${NOTIFICATION_SERVICE_URL}/notifications/send-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: dto.email.toLowerCase(),
+          subject: `You're invited to join ${neighborhood.name} on NeighborTools`,
+          templateKey: 'neighborhood-invite',
+          data: {
+            inviterName,
+            neighborhoodName: neighborhood.name,
+            description: neighborhood.description || '',
+            inviteCode: neighborhood.inviteCode,
+            appUrl: APP_URL,
+          },
+        }),
+      });
+    } catch (err) {
+      // Log error but don't fail the invite creation
+      console.error('Failed to send invite email:', err);
+    }
   }
 
   async listInvites(neighborhoodId: string): Promise<any[]> {
@@ -128,6 +184,12 @@ export class MemberService {
     });
 
     return invites;
+  }
+
+  async getInviteById(inviteId: string): Promise<any | null> {
+    return prisma.neighborhoodInvite.findUnique({
+      where: { id: inviteId },
+    });
   }
 
   async revokeInvite(inviteId: string): Promise<void> {

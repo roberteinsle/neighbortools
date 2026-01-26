@@ -9,6 +9,8 @@ interface UpdateUserDto {
   firstName?: string;
   lastName?: string;
   language?: 'EN' | 'DE' | 'ES' | 'FR';
+  role?: 'USER' | 'ADMIN';
+  isActive?: boolean;
 }
 
 interface UpdateUserSettingsDto {
@@ -59,6 +61,8 @@ export class UserService {
         ...(dto.firstName && { firstName: dto.firstName }),
         ...(dto.lastName && { lastName: dto.lastName }),
         ...(language && { language }),
+        ...(dto.role && { role: dto.role }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     });
 

@@ -64,6 +64,7 @@ services:
       - PORT=3001
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/user_db
       - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
     depends_on:
       postgres:
         condition: service_healthy
@@ -114,6 +115,9 @@ services:
       - NODE_ENV=production
       - PORT=3004
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/neighborhood_db
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3005
+      - USER_SERVICE_URL=http://user-service:3001
+      - APP_URL=https://www.neighbortools.net
     depends_on:
       postgres:
         condition: service_healthy

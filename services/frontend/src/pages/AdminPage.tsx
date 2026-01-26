@@ -12,11 +12,30 @@ import {
   Send,
   ChevronLeft,
   ChevronRight,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { adminApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { AdminUser, SmtpConfig, NotificationStats, EmailLog } from '@/types';
 
 export function AdminPage() {
@@ -25,6 +44,8 @@ export function AdminPage() {
 
   // Users Tab State
   const [userPage, setUserPage] = useState(1);
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [editForm, setEditForm] = useState<{ firstName: string; lastName: string; role: 'USER' | 'ADMIN' }>({ firstName: '', lastName: '', role: 'USER' });
 
   // SMTP Tab State
   const [emailLogPage, setEmailLogPage] = useState(1);
@@ -36,7 +57,7 @@ export function AdminPage() {
     queryKey: ['admin', 'users', userPage],
     queryFn: async () => {
       const response = await adminApi.getUsers({ page: userPage, pageSize: 10 });
-      return response.data.data as { data: AdminUser[]; pagination: { total: number; totalPages: number } };
+      return response.data.data as { items: AdminUser[]; total: number; page: number; pageSize: number; totalPages: number };
     },
   });
 
@@ -60,7 +81,7 @@ export function AdminPage() {
     queryKey: ['admin', 'email-logs', emailLogPage],
     queryFn: async () => {
       const response = await adminApi.getEmailLogs({ page: emailLogPage, pageSize: emailLogsPerPage });
-      return response.data.data as { data: EmailLog[]; pagination: { total: number; totalPages: number } };
+      return response.data.data as { items: EmailLog[]; total: number; page: number; pageSize: number; totalPages: number };
     },
   });
 
@@ -68,6 +89,14 @@ export function AdminPage() {
   const updateUserMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<AdminUser> }) =>
       adminApi.updateUser(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      setEditingUser(null);
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: (id: string) => adminApi.deleteUser(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     },
@@ -83,11 +112,34 @@ export function AdminPage() {
     },
   });
 
-  const handleToggleUserActive = (user: AdminUser) => {
+  const handleEditUser = (user: AdminUser) => {
+    setEditingUser(user);
+    setEditForm({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+    });
+  };
+
+  const handleSaveUser = () => {
+    if (!editingUser) return;
+    updateUserMutation.mutate({
+      id: editingUser.id,
+      data: editForm,
+    });
+  };
+
+  const handleDeactivateUser = (user: AdminUser) => {
     updateUserMutation.mutate({
       id: user.id,
-      data: { isActive: !user.isActive },
+      data: { isActive: false },
     });
+  };
+
+  const handleDeleteUser = (user: AdminUser) => {
+    if (window.confirm(t('admin.confirmDelete', { name: `${user.firstName} ${user.lastName}` }))) {
+      deleteUserMutation.mutate(user.id);
+    }
   };
 
   return (
@@ -139,10 +191,15 @@ export function AdminPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {usersQuery.data?.data.map((user) => (
+                        {usersQuery.data?.items.map((user) => (
                           <tr key={user.id} className="border-b">
                             <td className="p-3">
-                              {user.firstName} {user.lastName}
+                              <button
+                                onClick={() => handleEditUser(user)}
+                                className="text-primary hover:underline font-medium text-left"
+                              >
+                                {user.firstName} {user.lastName}
+                              </button>
                             </td>
                             <td className="p-3">{user.email}</td>
                             <td className="p-3">
@@ -170,21 +227,43 @@ export function AdminPage() {
                               )}
                             </td>
                             <td className="p-3">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleToggleUserActive(user)}
-                                disabled={updateUserMutation.isPending}
-                              >
-                                {user.isActive !== false ? t('admin.deactivate') : t('admin.activate')}
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEditUser(user)}
+                                  title={t('admin.edit')}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                {user.isActive !== false ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeactivateUser(user)}
+                                    disabled={updateUserMutation.isPending}
+                                  >
+                                    {t('admin.deactivate')}
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDeleteUser(user)}
+                                    disabled={deleteUserMutation.isPending}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    {t('admin.delete')}
+                                  </Button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                  {usersQuery.data?.pagination && usersQuery.data.pagination.totalPages > 1 && (
+                  {usersQuery.data && usersQuery.data.totalPages > 1 && (
                     <div className="flex justify-center gap-2">
                       <Button
                         variant="outline"
@@ -195,13 +274,13 @@ export function AdminPage() {
                         {t('common.previous')}
                       </Button>
                       <span className="flex items-center px-4">
-                        {userPage} / {usersQuery.data.pagination.totalPages}
+                        {userPage} / {usersQuery.data.totalPages}
                       </span>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setUserPage((p) => p + 1)}
-                        disabled={userPage >= usersQuery.data.pagination.totalPages}
+                        disabled={userPage >= usersQuery.data.totalPages}
                       >
                         {t('common.next')}
                       </Button>
@@ -286,7 +365,7 @@ export function AdminPage() {
               <CardContent>
                 {emailLogsQuery.isLoading ? (
                   <p className="text-muted-foreground">{t('common.loading')}</p>
-                ) : emailLogsQuery.data?.data.length === 0 ? (
+                ) : emailLogsQuery.data?.items.length === 0 ? (
                   <p className="text-muted-foreground">{t('admin.noEmails')}</p>
                 ) : (
                   <div className="space-y-4">
@@ -301,7 +380,7 @@ export function AdminPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {emailLogsQuery.data?.data.map((log) => (
+                          {emailLogsQuery.data?.items.map((log) => (
                             <tr key={log.id} className="border-b">
                               <td className="p-3">{log.to}</td>
                               <td className="p-3">{log.subject}</td>
@@ -328,7 +407,7 @@ export function AdminPage() {
                         </tbody>
                       </table>
                     </div>
-                    {emailLogsQuery.data?.pagination && emailLogsQuery.data.pagination.totalPages > 1 && (
+                    {emailLogsQuery.data && emailLogsQuery.data.totalPages > 1 && (
                       <div className="flex justify-center items-center gap-2">
                         <Button
                           variant="outline"
@@ -339,13 +418,13 @@ export function AdminPage() {
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
                         <span className="text-sm">
-                          {emailLogPage} / {emailLogsQuery.data.pagination.totalPages}
+                          {emailLogPage} / {emailLogsQuery.data.totalPages}
                         </span>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setEmailLogPage((p) => p + 1)}
-                          disabled={emailLogPage >= emailLogsQuery.data.pagination.totalPages}
+                          disabled={emailLogPage >= emailLogsQuery.data.totalPages}
                         >
                           <ChevronRight className="h-4 w-4" />
                         </Button>
@@ -403,6 +482,61 @@ export function AdminPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Edit User Dialog */}
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('admin.editUser')}</DialogTitle>
+            <DialogDescription>
+              {editingUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">{t('auth.firstName')}</Label>
+                <Input
+                  id="firstName"
+                  value={editForm.firstName}
+                  onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">{t('auth.lastName')}</Label>
+                <Input
+                  id="lastName"
+                  value={editForm.lastName}
+                  onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">{t('admin.role')}</Label>
+              <Select
+                value={editForm.role}
+                onValueChange={(value: 'USER' | 'ADMIN') => setEditForm((f) => ({ ...f, role: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USER">USER</SelectItem>
+                  <SelectItem value="ADMIN">ADMIN</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSaveUser} disabled={updateUserMutation.isPending}>
+              {updateUserMutation.isPending ? t('common.loading') : t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -145,7 +145,17 @@ export class MemberController {
 
       const { inviteId } = req.params;
 
-      // TODO: Verify requester has access to revoke this invite
+      // Get invite to find the neighborhood
+      const invite = await memberService.getInviteById(inviteId);
+      if (!invite) {
+        return res.status(404).json(errorResponse('Invite not found'));
+      }
+
+      // Check if requester is admin or owner of the neighborhood
+      const requesterRole = await neighborhoodService.getMemberRole(invite.neighborhoodId, userId);
+      if (!requesterRole || requesterRole === 'MEMBER') {
+        return res.status(403).json(errorResponse('Admin or owner access required'));
+      }
 
       await memberService.revokeInvite(inviteId);
       res.json(successResponse(null, 'Invite revoked successfully'));
