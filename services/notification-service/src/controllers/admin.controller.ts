@@ -110,15 +110,31 @@ export class AdminController {
         return res.status(403).json(errorResponse('Admin access required'));
       }
 
-      const result = await emailService.testConnection();
+      const { recipient } = req.body;
 
-      if (result.success) {
-        res.json(successResponse(null, 'SMTP connection successful'));
+      if (!recipient) {
+        return res.status(400).json(errorResponse('Recipient email is required'));
+      }
+
+      // Send actual test email
+      const result = await emailService.sendEmail({
+        to: recipient,
+        subject: 'NeighborTools - Test Email',
+        templateKey: 'test-email',
+        data: {
+          appName: 'NeighborTools',
+          timestamp: new Date().toLocaleString(),
+        },
+        language: 'EN',
+      });
+
+      if (result) {
+        res.json(successResponse(null, 'Test email sent successfully'));
       } else {
-        res.status(400).json(errorResponse(`SMTP connection failed: ${result.error}`));
+        res.status(400).json(errorResponse('Failed to send test email. Check email logs for details.'));
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to test SMTP';
+      const message = error instanceof Error ? error.message : 'Failed to send test email';
       res.status(500).json(errorResponse(message));
     }
   }

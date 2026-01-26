@@ -8,6 +8,9 @@ const toolController = new ToolController();
 // GET /tools - List tools (with filters)
 router.get('/', toolController.listTools);
 
+// GET /tools/my - Get current user's tools (must be before /:id)
+router.get('/my', toolController.getMyTools);
+
 // POST /tools - Create new tool
 router.post('/', toolController.createTool);
 

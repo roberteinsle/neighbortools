@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 interface ToolFilters {
   neighborhoodId?: string;
   ownerId?: string;
-  category?: ToolCategory;
+  category?: string; // Can be categoryId or legacy category key
   condition?: ToolCondition;
   isAvailable?: boolean;
   search?: string;
@@ -16,7 +16,7 @@ interface ToolFilters {
 interface UpdateToolDto {
   name?: string;
   description?: string;
-  category?: ToolCategory;
+  category?: string; // categoryId
   condition?: ToolCondition;
 }
 
@@ -36,7 +36,22 @@ export class ToolService {
       where.ownerId = filters.ownerId;
     }
     if (filters.category) {
-      where.category = filters.category;
+      // Check if it's a UUID (categoryId) or a legacy category key
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(filters.category);
+      if (isUuid) {
+        // Filter by categoryId - include the category and its children
+        const category = await prisma.category.findUnique({
+          where: { id: filters.category },
+          include: { children: true },
+        });
+        if (category) {
+          const categoryIds = [category.id, ...category.children.map((c) => c.id)];
+          where.categoryId = { in: categoryIds };
+        }
+      } else {
+        // Legacy category enum filter
+        where.categoryLegacy = filters.category;
+      }
     }
     if (filters.condition) {
       where.condition = filters.condition;
@@ -58,6 +73,7 @@ export class ToolService {
           images: {
             orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
           },
+          category: true,
         },
         skip,
         take,
@@ -73,17 +89,22 @@ export class ToolService {
   }
 
   async createTool(ownerId: string, dto: CreateToolDto): Promise<Tool> {
+    // Check if category is a UUID (new categoryId) or legacy enum
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dto.category);
+
     const tool = await prisma.tool.create({
       data: {
         name: dto.name,
         description: dto.description,
-        category: dto.category,
+        categoryId: isUuid ? dto.category : null,
+        categoryLegacy: !isUuid ? (dto.category as ToolCategory) : null,
         condition: dto.condition,
         neighborhoodId: dto.neighborhoodId,
         ownerId,
       },
       include: {
         images: true,
+        category: true,
       },
     });
 
@@ -97,6 +118,7 @@ export class ToolService {
         images: {
           orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
         },
+        category: true,
       },
     });
 
@@ -106,16 +128,29 @@ export class ToolService {
   }
 
   async updateTool(id: string, dto: UpdateToolDto): Promise<Tool> {
+    const updateData: any = {};
+
+    if (dto.name) updateData.name = dto.name;
+    if (dto.description) updateData.description = dto.description;
+    if (dto.condition) updateData.condition = dto.condition;
+
+    if (dto.category) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(dto.category);
+      if (isUuid) {
+        updateData.categoryId = dto.category;
+        updateData.categoryLegacy = null;
+      } else {
+        updateData.categoryLegacy = dto.category;
+        updateData.categoryId = null;
+      }
+    }
+
     const tool = await prisma.tool.update({
       where: { id },
-      data: {
-        ...(dto.name && { name: dto.name }),
-        ...(dto.description && { description: dto.description }),
-        ...(dto.category && { category: dto.category }),
-        ...(dto.condition && { condition: dto.condition }),
-      },
+      data: updateData,
       include: {
         images: true,
+        category: true,
       },
     });
 
@@ -134,6 +169,7 @@ export class ToolService {
       data: { isAvailable },
       include: {
         images: true,
+        category: true,
       },
     });
 
@@ -184,11 +220,20 @@ export class ToolService {
       id: tool.id,
       name: tool.name,
       description: tool.description,
-      category: tool.category,
+      // Return both new categoryId/categoryData and legacy category for backwards compatibility
+      category: tool.categoryLegacy || (tool.category?.key || 'OTHER'),
+      categoryId: tool.categoryId,
+      categoryData: tool.category ? {
+        id: tool.category.id,
+        key: tool.category.key,
+        name: tool.category.nameEn,
+        emoji: tool.category.emoji,
+      } : undefined,
       condition: tool.condition,
       ownerId: tool.ownerId,
       neighborhoodId: tool.neighborhoodId,
       imageUrl,
+      images: tool.images,
       isAvailable: tool.isAvailable,
       createdAt: tool.createdAt,
       updatedAt: tool.updatedAt,

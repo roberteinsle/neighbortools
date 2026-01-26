@@ -33,22 +33,26 @@ export interface Tool {
   id: string;
   name: string;
   description: string;
-  category: ToolCategory;
+  category?: string; // Legacy enum value
+  categoryId?: string;
+  categoryData?: Category; // Full category object
   condition: ToolCondition;
-  available: boolean;
+  isAvailable: boolean;
   ownerId: string;
   owner?: User;
   neighborhoodId: string;
-  images: ToolImage[];
+  imageUrl?: string;
+  images?: ToolImage[];
   createdAt: string;
   updatedAt: string;
 }
 
 export interface ToolImage {
   id: string;
-  url: string;
-  thumbnailUrl: string;
+  filename: string;
   isPrimary: boolean;
+  toolId: string;
+  createdAt: string;
 }
 
 export type ToolCategory =
@@ -64,10 +68,37 @@ export type ToolCategory =
 
 export type ToolCondition = 'NEW' | 'LIKE_NEW' | 'GOOD' | 'FAIR' | 'POOR';
 
+// Category types (hierarchical)
+export interface Category {
+  id: string;
+  key: string;
+  name: string;
+  emoji?: string;
+  parentId?: string;
+  parent?: {
+    id: string;
+    key: string;
+    name: string;
+    emoji?: string;
+  };
+  level?: number;
+  path?: string;
+  sortOrder: number;
+  toolCount: number;
+  children?: Category[];
+  isActive?: boolean;
+  names?: {
+    en: string;
+    de?: string;
+    es?: string;
+    fr?: string;
+  };
+}
+
 export interface CreateToolData {
   name: string;
   description: string;
-  category: ToolCategory;
+  categoryId: string;
   condition: ToolCondition;
   neighborhoodId: string;
 }
@@ -76,14 +107,21 @@ export interface CreateToolData {
 export interface Lending {
   id: string;
   toolId: string;
+  toolName: string;
   tool?: Tool;
   borrowerId: string;
   borrower?: User;
   lenderId: string;
   lender?: User;
+  neighborhoodId: string;
   status: LendingStatus;
+  requestedAt: string;
+  respondedAt?: string;
   startDate: string;
   endDate: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  returnedAt?: string;
   message?: string;
   createdAt: string;
   updatedAt: string;

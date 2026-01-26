@@ -37,7 +37,7 @@ export class EmailService {
         port: parseInt(process.env.SMTP_PORT || '587'),
         secure: process.env.SMTP_SECURE === 'true',
         user: process.env.SMTP_USER || '',
-        password: process.env.SMTP_PASSWORD || '',
+        password: process.env.SMTP_PASSWORD || process.env.SMTP_PASS || '',
         fromEmail: process.env.SMTP_FROM || 'noreply@neighbortools.net',
         fromName: process.env.SMTP_FROM_NAME || 'NeighborTools',
       };

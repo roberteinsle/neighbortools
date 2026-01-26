@@ -126,29 +126,54 @@ export const toolsApi = {
   getAll: (params?: { neighborhoodId?: string; category?: string; search?: string; page?: number; limit?: number }) =>
     api.get('/tools', { params }),
   getById: (id: string) => api.get(`/tools/${id}`),
-  create: (data: FormData) => api.post('/tools', data, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  update: (id: string, data: FormData) => api.patch(`/tools/${id}`, data, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
+  create: (data: { name: string; description: string; category: string; condition: string; neighborhoodId: string }) =>
+    api.post('/tools', data),
+  update: (id: string, data: { name?: string; description?: string; category?: string; condition?: string }) =>
+    api.put(`/tools/${id}`, data),
   delete: (id: string) => api.delete(`/tools/${id}`),
   getMyTools: () => api.get('/tools/my'),
+  toggleAvailability: (id: string, isAvailable: boolean) =>
+    api.put(`/tools/${id}/availability`, { isAvailable }),
+  // Image operations
+  uploadImages: (toolId: string, files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('images', file));
+    return api.post(`/tools/${toolId}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  deleteImage: (toolId: string, imageId: string) =>
+    api.delete(`/tools/${toolId}/images/${imageId}`),
+  setPrimaryImage: (toolId: string, imageId: string) =>
+    api.put(`/tools/${toolId}/images/${imageId}/primary`),
+  getByNeighborhood: (neighborhoodId: string, params?: { page?: number; pageSize?: number }) =>
+    api.get(`/tools/neighborhood/${neighborhoodId}`, { params }),
 };
 
 export const lendingsApi = {
-  getAll: (params?: { status?: string; page?: number; limit?: number }) =>
+  getAll: (params?: { status?: string; role?: string; page?: number; pageSize?: number }) =>
     api.get('/lendings', { params }),
   getById: (id: string) => api.get(`/lendings/${id}`),
-  create: (data: { toolId: string; startDate: string; endDate: string; message?: string }) =>
-    api.post('/lendings', data),
-  approve: (id: string) => api.post(`/lendings/${id}/approve`),
-  reject: (id: string, reason?: string) => api.post(`/lendings/${id}/reject`, { reason }),
-  cancel: (id: string) => api.post(`/lendings/${id}/cancel`),
-  return: (id: string) => api.post(`/lendings/${id}/return`),
-  extend: (id: string, newEndDate: string) => api.post(`/lendings/${id}/extend`, { newEndDate }),
-  getMyRequests: () => api.get('/lendings/my-requests'),
-  getIncomingRequests: () => api.get('/lendings/incoming'),
+  create: (data: {
+    toolId: string;
+    toolName: string;
+    lenderId: string;
+    neighborhoodId: string;
+    startDate: string;
+    endDate: string;
+    message?: string;
+  }) => api.post('/lendings', data),
+  approve: (id: string) => api.put(`/lendings/${id}/approve`),
+  reject: (id: string, reason?: string) => api.put(`/lendings/${id}/reject`, { reason }),
+  cancel: (id: string) => api.put(`/lendings/${id}/cancel`),
+  start: (id: string) => api.put(`/lendings/${id}/start`),
+  return: (id: string, note?: string) => api.put(`/lendings/${id}/return`, { note }),
+  extend: (id: string, newEndDate: string) => api.put(`/lendings/${id}/extend`, { newEndDate }),
+  getMyRequests: (params?: { status?: string; page?: number; pageSize?: number }) =>
+    api.get('/lendings', { params: { ...params, role: 'borrower' } }),
+  getIncomingRequests: (params?: { status?: string; page?: number; pageSize?: number }) =>
+    api.get('/lendings', { params: { ...params, role: 'lender' } }),
+  getHistory: (id: string) => api.get(`/lendings/${id}/history`),
 };
 
 export const neighborhoodsApi = {
@@ -175,6 +200,27 @@ export const membersApi = {
   revokeInvite: (inviteId: string) => api.delete(`/members/invites/${inviteId}`),
 };
 
+export const categoriesApi = {
+  getAll: (params?: { language?: string }) =>
+    api.get('/categories', { params }),
+  getTopLevel: (params?: { language?: string }) =>
+    api.get('/categories/top-level', { params }),
+  getById: (id: string) =>
+    api.get(`/categories/${id}`),
+  getWithChildren: (id: string, params?: { language?: string }) =>
+    api.get(`/categories/${id}/with-children`, { params }),
+  getToolsByCategory: (id: string, neighborhoodId: string, params?: { page?: number; pageSize?: number }) =>
+    api.get(`/categories/${id}/tools`, { params: { neighborhoodId, ...params } }),
+  create: (data: { key: string; nameEn: string; nameDe?: string; nameEs?: string; nameFr?: string; emoji?: string; parentId?: string; sortOrder?: number }) =>
+    api.post('/categories', data),
+  update: (id: string, data: { nameEn?: string; nameDe?: string; nameEs?: string; nameFr?: string; emoji?: string; sortOrder?: number; isActive?: boolean }) =>
+    api.put(`/categories/${id}`, data),
+  delete: (id: string) =>
+    api.delete(`/categories/${id}`),
+  seed: () =>
+    api.post('/categories/seed'),
+};
+
 export const adminApi = {
   // User management
   getUsers: (params?: { page?: number; pageSize?: number }) =>
@@ -194,7 +240,7 @@ export const adminApi = {
     fromEmail: string;
     fromName: string;
   }) => api.put('/notifications/admin/smtp', data),
-  testSmtpConfig: () => api.post('/notifications/admin/smtp/test'),
+  sendTestEmail: (recipient: string) => api.post('/notifications/admin/smtp/test', { recipient }),
 
   // Stats and logs
   getStats: () => api.get('/notifications/admin/stats'),

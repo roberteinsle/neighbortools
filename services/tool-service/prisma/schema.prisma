@@ -12,7 +12,8 @@ model Tool {
   id             String        @id @default(uuid())
   name           String
   description    String
-  category       ToolCategory
+  categoryId     String?       @map("category_id")
+  categoryLegacy ToolCategory? @map("category_legacy")
   condition      ToolCondition
   ownerId        String        @map("owner_id")
   neighborhoodId String        @map("neighborhood_id")
@@ -20,11 +21,12 @@ model Tool {
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
-  images ToolImage[]
+  images   ToolImage[]
+  category Category?   @relation("ToolCategory", fields: [categoryId], references: [id])
 
   @@index([neighborhoodId])
   @@index([ownerId])
-  @@index([category])
+  @@index([categoryId])
   @@map("tools")
 }
 
@@ -44,17 +46,30 @@ model ToolImage {
 }
 
 model Category {
-  id          String   @id @default(uuid())
-  key         String   @unique
-  nameEn      String   @map("name_en")
-  nameDe      String   @map("name_de")
-  nameEs      String   @map("name_es")
-  nameFr      String   @map("name_fr")
-  icon        String?
-  sortOrder   Int      @default(0) @map("sort_order")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id            String     @id @default(uuid())
+  googleId      Int?       @unique @map("google_id")
+  key           String     @unique
+  nameEn        String     @map("name_en")
+  nameDe        String?    @map("name_de")
+  nameEs        String?    @map("name_es")
+  nameFr        String?    @map("name_fr")
+  emoji         String?
+  parentId      String?    @map("parent_id")
+  level         Int        @default(0)
+  path          String?    // Full path like "Hardware > Tools > Hand Tools"
+  sortOrder     Int        @default(0) @map("sort_order")
+  isActive      Boolean    @default(true) @map("is_active")
+  toolCount     Int        @default(0) @map("tool_count")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
 
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  tools    Tool[]     @relation("ToolCategory")
+
+  @@index([parentId])
+  @@index([level])
+  @@index([isActive])
   @@map("categories")
 }
 

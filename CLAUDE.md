@@ -152,6 +152,56 @@ scripts/
 - **Profile updates use POST**: Frontend uses POST instead of PATCH for `/api/users/profile` due to GitHub Codespaces proxy issues with PATCH request bodies
 - **No body parsing in gateway**: API Gateway does not parse request bodies; raw body is forwarded directly to microservices
 
+### Category System
+
+The tool category system is based on the **Google Shopping Product Taxonomy**:
+- Reference: https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.txt
+
+**Hierarchical Structure**:
+- Categories have parent/child relationships (up to 2 levels deep)
+- Each category has an emoji for visual identification
+- Multi-language support (EN, DE, ES, FR) with names stored per language
+
+**Top-Level Categories** (14 categories with ~41 subcategories):
+- Hand Tools, Power Tools, Garden & Outdoor, Measuring & Layout
+- Painting & Decorating, Plumbing, Electrical, Automotive
+- Cleaning & Maintenance, Building & Construction, Safety & Workwear
+- Storage & Organization, Ladders & Scaffolding, Specialty Tools
+
+**Database Schema** (tool-service):
+```prisma
+model Category {
+  id        String     @id @default(uuid())
+  key       String     @unique        // e.g., "HAND_TOOLS", "POWER_DRILLS"
+  googleId  String?                   // Google taxonomy ID reference
+  emoji     String?                   // Visual identifier
+  parentId  String?                   // For hierarchical structure
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId])
+  children  Category[] @relation("CategoryHierarchy")
+  level     Int        @default(0)    // 0 = top-level, 1 = subcategory
+  nameEn    String                    // Multi-language names
+  nameDe    String?
+  nameEs    String?
+  nameFr    String?
+  tools     Tool[]
+}
+```
+
+**API Endpoints** (`/api/categories`):
+- `GET /top-level` - Get all top-level categories with children
+- `GET /:id/with-children` - Get category with its children
+- `POST /seed` - Seed default categories (admin only)
+
+**Frontend Flow**:
+1. ToolsPage shows category cards first (not tools)
+2. User clicks a category to see subcategories and tools
+3. Tool creation requires category selection before entering tool details
+4. Category filter via URL param: `/tools?category={categoryId}`
+
+**Backwards Compatibility**:
+- Tools have both `categoryId` (UUID) and `categoryLegacy` (enum) fields
+- Tool service auto-detects UUID vs legacy enum when filtering/creating
+
 ### Critical Infrastructure - DO NOT DELETE
 
 **IMPORTANT: The database container `neighbortools-db` must NEVER be deleted or recreated.**

@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { AdminUser, SmtpConfig, NotificationStats, EmailLog } from '@/types';
+import type { AdminUser, NotificationStats, EmailLog } from '@/types';
 
 export function AdminPage() {
   const { t } = useTranslation();
@@ -50,6 +50,7 @@ export function AdminPage() {
   // SMTP Tab State
   const [emailLogPage, setEmailLogPage] = useState(1);
   const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [testEmailRecipient, setTestEmailRecipient] = useState('');
   const emailLogsPerPage = 10;
 
   // Queries
@@ -58,14 +59,6 @@ export function AdminPage() {
     queryFn: async () => {
       const response = await adminApi.getUsers({ page: userPage, pageSize: 10 });
       return response.data.data as { items: AdminUser[]; total: number; page: number; pageSize: number; totalPages: number };
-    },
-  });
-
-  const smtpQuery = useQuery({
-    queryKey: ['admin', 'smtp'],
-    queryFn: async () => {
-      const response = await adminApi.getSmtpConfig();
-      return response.data.data as SmtpConfig | null;
     },
   });
 
@@ -103,12 +96,14 @@ export function AdminPage() {
   });
 
   const testSmtpMutation = useMutation({
-    mutationFn: () => adminApi.testSmtpConfig(),
+    mutationFn: (recipient: string) => adminApi.sendTestEmail(recipient),
     onSuccess: () => {
       setSmtpTestResult({ success: true, message: t('admin.smtpTestSuccess') });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'email-logs'] });
     },
     onError: () => {
       setSmtpTestResult({ success: false, message: t('admin.smtpTestError') });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'email-logs'] });
     },
   });
 
@@ -297,34 +292,29 @@ export function AdminPage() {
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>{t('admin.smtpConfig')}</CardTitle>
-                <CardDescription>{t('admin.smtpFromEnv')}</CardDescription>
+                <CardTitle>{t('admin.sendTestEmail')}</CardTitle>
+                <CardDescription>{t('admin.sendTestEmailDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {smtpQuery.isLoading ? (
-                  <p className="text-muted-foreground">{t('common.loading')}</p>
-                ) : smtpQuery.data ? (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">{t('admin.smtpHost')}</p>
-                      <p className="font-mono">{smtpQuery.data.host || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">{t('admin.smtpPort')}</p>
-                      <p className="font-mono">{smtpQuery.data.port || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">{t('admin.smtpUser')}</p>
-                      <p className="font-mono">{smtpQuery.data.user || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">{t('admin.smtpFromEmail')}</p>
-                      <p className="font-mono">{smtpQuery.data.fromEmail || '-'}</p>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">{t('admin.smtpNotConfigured')}</p>
-                )}
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    placeholder={t('admin.testEmailPlaceholder')}
+                    value={testEmailRecipient}
+                    onChange={(e) => setTestEmailRecipient(e.target.value)}
+                    className="max-w-sm"
+                  />
+                  <Button
+                    onClick={() => {
+                      setSmtpTestResult(null);
+                      testSmtpMutation.mutate(testEmailRecipient);
+                    }}
+                    disabled={testSmtpMutation.isPending || !testEmailRecipient}
+                  >
+                    <Send className="mr-2 h-4 w-4" />
+                    {testSmtpMutation.isPending ? t('common.loading') : t('common.submit')}
+                  </Button>
+                </div>
 
                 {smtpTestResult && (
                   <div
@@ -342,18 +332,6 @@ export function AdminPage() {
                     {smtpTestResult.message}
                   </div>
                 )}
-
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSmtpTestResult(null);
-                    testSmtpMutation.mutate();
-                  }}
-                  disabled={testSmtpMutation.isPending || !smtpQuery.data?.host}
-                >
-                  <Send className="mr-2 h-4 w-4" />
-                  {testSmtpMutation.isPending ? t('common.loading') : t('admin.sendTestEmail')}
-                </Button>
               </CardContent>
             </Card>
 
@@ -369,7 +347,7 @@ export function AdminPage() {
                   <p className="text-muted-foreground">{t('admin.noEmails')}</p>
                 ) : (
                   <div className="space-y-4">
-                    <div className="rounded-md border">
+                    <div className="rounded-md border overflow-x-auto">
                       <table className="w-full">
                         <thead>
                           <tr className="border-b bg-muted/50">
@@ -381,7 +359,7 @@ export function AdminPage() {
                         </thead>
                         <tbody>
                           {emailLogsQuery.data?.items.map((log) => (
-                            <tr key={log.id} className="border-b">
+                            <tr key={log.id} className={`border-b ${log.status === 'FAILED' ? 'bg-red-50' : ''}`}>
                               <td className="p-3">{log.to}</td>
                               <td className="p-3">{log.subject}</td>
                               <td className="p-3">
@@ -398,6 +376,11 @@ export function AdminPage() {
                                   {log.status === 'FAILED' && <XCircle className="h-3 w-3" />}
                                   {log.status}
                                 </span>
+                                {log.status === 'FAILED' && log.error && (
+                                  <p className="text-xs text-red-600 mt-1 max-w-xs truncate" title={log.error}>
+                                    {log.error}
+                                  </p>
+                                )}
                               </td>
                               <td className="p-3 text-muted-foreground">
                                 {new Date(log.createdAt).toLocaleString()}

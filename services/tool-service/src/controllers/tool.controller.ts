@@ -28,6 +28,24 @@ export class ToolController {
     }
   }
 
+  async getMyTools(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.headers['x-user-id'] as string;
+      if (!userId) {
+        return res.status(401).json(errorResponse('Unauthorized'));
+      }
+
+      const page = parseInt(req.query.page as string) || 1;
+      const pageSize = parseInt(req.query.pageSize as string) || 10;
+
+      const { tools, total } = await toolService.getToolsByUser(userId, { page, pageSize });
+      res.json(successResponse(paginatedResponse(tools, total, { page, pageSize })));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to get tools';
+      res.status(500).json(errorResponse(message));
+    }
+  }
+
   async createTool(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = req.headers['x-user-id'] as string;

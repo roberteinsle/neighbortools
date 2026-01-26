@@ -9,8 +9,11 @@ import { HomePage } from '@/pages/HomePage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ToolsPage } from '@/pages/ToolsPage';
+import { ToolDetailPage } from '@/pages/ToolDetailPage';
+import { ToolFormPage } from '@/pages/ToolFormPage';
 import { LendingsPage } from '@/pages/LendingsPage';
 import { NeighborhoodsPage } from '@/pages/NeighborhoodsPage';
+import { NeighborhoodEditPage } from '@/pages/NeighborhoodEditPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { AdminPage } from '@/pages/AdminPage';
 import { SUPPORTED_LANGS } from '@/hooks/useLocalizedNavigate';
@@ -78,6 +81,30 @@ function LocalizedRoutes() {
             }
           />
           <Route
+            path="tools/new"
+            element={
+              <ProtectedRoute>
+                <ToolFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="tools/:id"
+            element={
+              <ProtectedRoute>
+                <ToolDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="tools/:id/edit"
+            element={
+              <ProtectedRoute>
+                <ToolFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="lendings"
             element={
               <ProtectedRoute>
@@ -90,6 +117,14 @@ function LocalizedRoutes() {
             element={
               <ProtectedRoute>
                 <NeighborhoodsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="neighborhoods/:id"
+            element={
+              <ProtectedRoute>
+                <NeighborhoodEditPage />
               </ProtectedRoute>
             }
           />
@@ -150,6 +185,30 @@ function AppContent() {
           }
         />
         <Route
+          path="/tools/new"
+          element={
+            <ProtectedRoute>
+              <ToolFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/:id"
+          element={
+            <ProtectedRoute>
+              <ToolDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tools/:id/edit"
+          element={
+            <ProtectedRoute>
+              <ToolFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/lendings"
           element={
             <ProtectedRoute>
@@ -162,6 +221,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <NeighborhoodsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/neighborhoods/:id"
+          element={
+            <ProtectedRoute>
+              <NeighborhoodEditPage />
             </ProtectedRoute>
           }
         />
